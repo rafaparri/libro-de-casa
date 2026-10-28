@@ -144,8 +144,9 @@ async function main(){
     catch(e){ console.error('Error en', h, e); res.push({h, error:e.message}); }
   }
   console.log(JSON.stringify(res.map(r=>({h:r.h,ok:r.ok,skip:r.skip,error:r.error,total:r.totalPrev})),null,1));
+  console.log('::notice title=Resultado por libro::'+res.map(r=>`${r.nombre||r.h}: ${r.ok?(r.existente?'borrador existente sin revisar':'borrador generado'):(r.skip||('ERROR '+r.error))}`).join(' | '));
   const generados = res.filter(r=>r.ok), errores = res.filter(r=>r.error);
-  if(generados.length===0 && errores.length===0){ console.log('No hay nada nuevo que avisar.'); return; }
+  if(generados.length===0 && errores.length===0){ console.log('No hay nada nuevo que avisar.'); console.log('::notice title=Correo::no enviado, nada nuevo que avisar'); return; }
 
   const li = a => a.map(x=>`<li>${x}</li>`).join('');
   let html = `<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.5;max-width:640px;">`;
@@ -164,9 +165,10 @@ async function main(){
 
   if(process.env.NO_MAIL){ console.log('HTML:', html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,1500)); return; }
   const tr = nodemailer.createTransport({service:'gmail', auth:{user:process.env.GMAIL_USER, pass:process.env.GMAIL_APP_PASSWORD}});
+  console.log('::notice title=Correo::enviando con usuario '+(process.env.GMAIL_USER||'(vacío)')+' contraseña '+(process.env.GMAIL_APP_PASSWORD?'presente ('+process.env.GMAIL_APP_PASSWORD.length+' caracteres)':'AUSENTE'));
   await tr.sendMail({from:`Libro de Casa <${process.env.GMAIL_USER}>`, to:process.env.MAIL_TO||process.env.GMAIL_USER,
     subject:`📝 Borrador de previsiones de ${label(target)} listo para revisar`, html});
-  console.log('Correo enviado.');
+  console.log('Correo enviado.'); console.log('::notice title=Correo::enviado a '+(process.env.MAIL_TO||process.env.GMAIL_USER));
   if(errores.length) process.exitCode = 1;
 }
 main().catch(e=>{ console.error(e); process.exit(1); });
