@@ -65,7 +65,15 @@ async function borradorHogar(h, ids, target, forzar){
   const bors = await getDoc(P+'presup_borradores', {});
   const budget = await getDoc(P+`budget:${target}`, {});
   if(!forzar){
-    if(bors[target]) return {h, nombre, skip:'ya existe un borrador de '+label(target)};
+    if(bors[target]){
+      const b = bors[target];
+      if(b.revisado) return {h, nombre, skip:'el borrador de '+label(target)+' ya está revisado'};
+      // ya existía un borrador sin revisar (p. ej. lo generó la app al abrirla): se avisa igualmente
+      const nmMes = nm.filter(p=>p.meses&&p.meses.includes(Number(target.split('-')[1])));
+      const gCats = cats.map(c=>c[0]).filter(t=>!isIncome((cats.find(c=>c[0]===t)||[])[1]));
+      const total = gCats.reduce((acc,t)=>{ const bb=Number(budget[t])||0; return acc + (bb>0 ? bb : nmMes.filter(p=>p.tipo===t).reduce((x,p)=>x+Number(p.importe),0)); },0);
+      return {h, nombre, ok:true, existente:true, generadoEl:b.generadoEl, hist:b.meses||[], totalPrev:total, nmTocan:b.nmTocan||[], nmProximos:b.nmProximos||[], atrasados:b.atrasados||[]};
+    }
     if(Object.values(budget).some(v=>Number(v)>0)) return {h, nombre, skip:'ya tiene previsión en '+label(target)};
   }
   const groupOf = t => (cats.find(c=>c[0]===t)||[])[1];
@@ -144,7 +152,7 @@ async function main(){
   html += `<h2 style="margin-bottom:4px;">Borrador de previsiones de ${label(target)} listo para revisar</h2>`;
   html += `<p>Revísalo y ajústalo <b>antes del día 25</b>. Entra aquí: <a href="${APP_URL}">${APP_URL}</a> → Presupuesto → ${label(target)}.</p>`;
   for(const r of generados){
-    html += `<h3 style="margin:18px 0 4px;">${r.nombre}</h3><p style="margin:0;">Previsión total de gastos propuesta: <b>${eur(r.totalPrev)}</b> (máximo de los últimos ${r.hist.length} meses de cada categoría).</p>`;
+    html += `<h3 style="margin:18px 0 4px;">${r.nombre}</h3><p style="margin:0;">Previsión total de gastos propuesta: <b>${eur(r.totalPrev)}</b> (máximo de los últimos ${r.hist.length} meses de cada categoría).${r.existente?` Borrador generado el ${new Date(r.generadoEl).toLocaleDateString('es-ES')}, <b>aún sin revisar</b>.`:''}</p>`;
     html += r.nmTocan.length ? `<p style="margin:8px 0 2px;"><b>Pagos no mensuales que tocan este mes:</b></p><ul>${li(r.nmTocan.map(p=>`${p.nombre} (${p.tipo}): ${eur(p.importe)}`))}</ul>` : `<p style="margin:8px 0;">Este mes no toca ningún pago no mensual.</p>`;
     if(r.nmProximos.length) html += `<p style="margin:8px 0 2px;"><b>Próximos dos meses:</b></p><ul>${li(r.nmProximos.map(p=>`${label(p.mes)}: ${p.nombre} ${eur(p.importe)}`))}</ul>`;
     if(r.atrasados.length) html += `<p style="margin:8px 0 2px;color:#a33;"><b>⚠ Posibles pagos no mensuales atrasados:</b></p><ul>${li(r.atrasados.map(p=>`${label(p.mes)}: ${p.nombre} (${p.tipo}) ${eur(p.importe)} — gastado en la categoría: ${eur(p.gastado)}`))}</ul>`;
