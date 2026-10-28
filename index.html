@@ -11,6 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <style>
 :root{
   --paper:#FFFBF3;
@@ -330,6 +331,19 @@ tr:hover td{background:var(--paper-alt);}
 <!-- ================= AUTH ================= -->
 <div id="authWrap">
 
+  <!-- Paso 0: acceso a la base de datos (cuenta de Firebase, una vez por dispositivo) -->
+  <div class="authCard hidden" id="gateCard">
+    <div class="authBrand">
+      <div class="seal">LC</div>
+      <div><h1>Libro de Casa</h1><p>Acceso a este dispositivo</p></div>
+    </div>
+    <p class="small" style="margin-top:-6px;margin-bottom:18px;">Para proteger tus datos, este dispositivo necesita identificarse una vez. Usa el correo y la contraseña de acceso que creaste para Libro de Casa. Después ya no te lo vuelve a pedir en este dispositivo.</p>
+    <div class="field"><label>Correo de acceso</label><input id="gt_email" type="email" autocapitalize="off" autocomplete="username"></div>
+    <div class="field"><label>Contraseña de acceso</label><input id="gt_pass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doGateLogin()"></div>
+    <button class="btn btn-primary btn-block" onclick="doGateLogin()">Entrar</button>
+    <div id="gateMsg"></div>
+  </div>
+
   <!-- Paso 1: código de hogar -->
   <div class="authCard" id="hogarCard">
     <div class="authBrand">
@@ -411,7 +425,8 @@ tr:hover td{background:var(--paper-alt);}
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
-      <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()">Cerrar sesión</button>
+      <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
+      <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
     </div>
   </aside>
 
@@ -531,6 +546,45 @@ if(typeof firebase === 'undefined'){
 }else{
   firebase.initializeApp(firebaseConfig);
   firestoreDb = firebase.firestore();
+}
+/* Acceso protegido: las reglas de Firestore exigen una cuenta de Firebase autorizada, de modo que aunque
+   este archivo sea público nadie puede leer ni escribir los datos sin ese correo y contraseña. */
+let GATE_SIGNED_IN_ONCE = false;
+function initGate(){
+  if(!firestoreDb) return;
+  firebase.auth().onAuthStateChanged(user=>{
+    if(user){
+      if(!GATE_SIGNED_IN_ONCE){ GATE_SIGNED_IN_ONCE = true; initAuth(); }
+    }else{
+      if(GATE_SIGNED_IN_ONCE){ location.reload(); return; }
+      document.getElementById('authWrap').style.display='flex';
+      showAuthCard('gateCard');
+    }
+  });
+}
+async function doGateLogin(){
+  const email = document.getElementById('gt_email').value.trim();
+  const pass = document.getElementById('gt_pass').value;
+  const msg = document.getElementById('gateMsg');
+  msg.innerHTML='';
+  if(!email || !pass){ msg.innerHTML='<div class="authMsg err">Escribe el correo y la contraseña.</div>'; return; }
+  try{
+    await firebase.auth().signInWithEmailAndPassword(email, pass);
+  }catch(e){
+    const c = e && e.code || '';
+    let t = 'No se ha podido entrar: '+(e.message||c);
+    if(c==='auth/invalid-credential'||c==='auth/wrong-password'||c==='auth/user-not-found'||c==='auth/invalid-email') t='Correo o contraseña incorrectos.';
+    else if(c==='auth/too-many-requests') t='Demasiados intentos. Espera unos minutos y vuelve a probar.';
+    else if(c==='auth/network-request-failed') t='Sin conexión. Comprueba tu internet.';
+    else if(c==='auth/operation-not-allowed') t='El acceso por correo no está activado en Firebase (Authentication → Sign-in method → Email/Contraseña).';
+    msg.innerHTML=`<div class="authMsg err">${t}</div>`;
+  }
+}
+async function disconnectDevice(){
+  if(!await uiConfirm('Este dispositivo dejará de tener acceso a los datos hasta que vuelvas a escribir el correo y la contraseña de acceso. ¿Desconectarlo?')) return;
+  try{ await sDelete('session', false); }catch(e){}
+  try{ GATE_SIGNED_IN_ONCE = false; await firebase.auth().signOut(); }catch(e){}
+  location.reload();
 }
 // Colección propia de esta app dentro del mismo proyecto de Firebase — así
 // convive sin mezclarse con los datos de Mi Plan Halterofilia u otras apps.
@@ -792,7 +846,7 @@ function isIncomeTipo(tipo){ return isIncomeGroup(groupOf(tipo)); }
    AUTENTICACIÓN (por hogar)
    ===================================================================== */
 function showAuthCard(id){
-  ['hogarCard','setupCard','loginCard'].forEach(cid=>{
+  ['gateCard','hogarCard','setupCard','loginCard'].forEach(cid=>{
     document.getElementById(cid).classList.toggle('hidden', cid!==id);
   });
   if(id==='hogarCard') populateKnownHogares();
@@ -5160,7 +5214,7 @@ async function withBusy(workingText, doneText, fn){
 /* =====================================================================
    INIT
    ===================================================================== */
-initAuth();
+initGate();
 </script>
 </body>
 </html>
