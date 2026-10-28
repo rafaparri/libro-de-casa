@@ -1,0 +1,32 @@
+name: Borrador mensual de previsiones
+
+on:
+  schedule:
+    - cron: '0 8 20 * *'      # día 20 de cada mes, 08:00 UTC (9:00 o 10:00 en España)
+  workflow_dispatch:
+    inputs:
+      forzar:
+        description: 'Regenerar aunque ya haya previsión o borrador (true/false)'
+        default: 'false'
+      mes_destino:
+        description: 'Mes de destino YYYY-MM (vacío = mes siguiente)'
+        default: ''
+
+jobs:
+  borrador:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save nodemailer@6
+      - run: node scripts/borrador.js
+        env:
+          FIREBASE_EMAIL: rafa.parri@gmail.com
+          FIREBASE_PASSWORD: ${{ secrets.FIREBASE_PASSWORD }}
+          GMAIL_USER: rafa.parri@gmail.com
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO: rafa.parri@gmail.com
+          FORZAR: ${{ github.event.inputs.forzar }}
+          MES_DESTINO: ${{ github.event.inputs.mes_destino }}
