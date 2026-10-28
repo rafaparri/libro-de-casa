@@ -1341,7 +1341,28 @@ async function go(view){
   else if(view==='presupuesto') await renderPresupuesto();
   else if(view==='informes') await renderInformes();
   else if(view==='categorias') await renderCategorias();
-  else if(view==='admin') await renderAdmin();
+  else if(view==='admin') await renderAdminSeguro(myGen);
+}
+/* Administración: se dibuja con protección. Si por cualquier motivo el contenido se vacía
+   (o se pisa con otra pantalla) en los segundos siguientes, se vuelve a dibujar solo. */
+async function renderAdminSeguro(myGen){
+  for(let intento=0; intento<3; intento++){
+    try{ await renderAdmin(); }
+    catch(e){
+      console.error('Administración', e);
+      const c = document.getElementById('content');
+      if(c) c.innerHTML = '<div class="card"><p>No se ha podido cargar Administración: '+(e&&e.message||e)+'</p><button class="btn btn-primary" onclick="go(\'admin\')">Reintentar</button></div>';
+      return;
+    }
+    // vigilar 4 segundos
+    for(let i=0;i<8;i++){
+      await new Promise(r=>setTimeout(r,500));
+      if(STATE.view!=='admin' || STATE.renderGen!==myGen) return;
+      const c = document.getElementById('content');
+      if(!c || c.querySelector('.sectionTitle')==null) break; // desapareció: repetir
+      if(i===7) return;
+    }
+  }
 }
 function openMobileSidebar(){
   document.getElementById('sidebarEl').classList.add('mobileOpen');
