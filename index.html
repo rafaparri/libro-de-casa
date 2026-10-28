@@ -1505,7 +1505,8 @@ async function renderDashboard(gen){
 /* =====================================================================
    MOVIMIENTOS
    ===================================================================== */
-let MOV_FILTER = {text:'', tipo:'', grupo:'', onlyUncat:false, entidad:''};
+let MOV_FILTER = {text:'', tipo:'', grupo:'', onlyUncat:false, entidad:'', scope:'mes', otroMes:'', desde:'', hasta:''};
+let MOV_RENDER_GEN = 0;
 let MOV_SEL = new Set(); // ids seleccionados para cambio masivo
 const ENTIDADES = ['BSCH','BBVA','BS'];
 const ENTIDAD_NOMBRES = {BSCH:'Banco Santander', BBVA:'BBVA', BS:'Banco Sabadell'};
@@ -1516,6 +1517,7 @@ async function renderMovimientos(){
   const el = document.getElementById('content');
   const groups = [...new Set(STATE.categories.map(c=>c[1]))].sort();
   MOV_SEL = new Set();
+  if(!MOV_FILTER.otroMes) MOV_FILTER.otroMes = STATE.currentMonth;
   el.innerHTML = `
     <div class="toolbar">
       <button class="btn btn-primary fileBtn">Importar extracto del banco (.xls/.xlsx)
@@ -1524,6 +1526,17 @@ async function renderMovimientos(){
       <button class="btn btn-ghost" onclick="openManualEntry()">+ Apunte manual</button>
       <button class="btn btn-ghost" onclick="buscarCoincidenciasMes()" title="Compara los apuntes manuales con los movimientos del banco ya importados">🔍 Buscar coincidencias manual/banco</button>
       <input type="search" placeholder="Buscar concepto…" value="${MOV_FILTER.text}" oninput="MOV_FILTER.text=this.value; renderMovTable();">
+      <select id="movScope" onchange="onMovScopeChange(this.value)" title="Dónde buscar">
+        <option value="mes" ${MOV_FILTER.scope==='mes'?'selected':''}>Mes en curso</option>
+        <option value="otro" ${MOV_FILTER.scope==='otro'?'selected':''}>Otro mes…</option>
+        <option value="rango" ${MOV_FILTER.scope==='rango'?'selected':''}>Rango de fechas…</option>
+        <option value="todos" ${MOV_FILTER.scope==='todos'?'selected':''}>Todos los meses</option>
+      </select>
+      <input type="month" id="movOtroMes" value="${MOV_FILTER.otroMes||STATE.currentMonth}" style="${MOV_FILTER.scope==='otro'?'':'display:none;'}" onchange="MOV_FILTER.otroMes=this.value; renderMovTable();">
+      <span id="movRango" style="${MOV_FILTER.scope==='rango'?'display:inline-flex;':'display:none;'} gap:6px; align-items:center;">
+        <span class="small">Desde</span><input type="date" value="${MOV_FILTER.desde}" onchange="MOV_FILTER.desde=this.value; renderMovTable();">
+        <span class="small">hasta</span><input type="date" value="${MOV_FILTER.hasta}" onchange="MOV_FILTER.hasta=this.value; renderMovTable();">
+      </span>
       <select onchange="MOV_FILTER.grupo=this.value; renderMovTable();">
         <option value="">Todos los grupos</option>
         ${groups.map(g=>`<option value="${g}" ${MOV_FILTER.grupo===g?'selected':''}>${g}</option>`).join('')}
@@ -1563,19 +1576,56 @@ async function renderMovimientos(){
   `;
   renderMovTable();
 }
-function renderMovTable(){
+/* Reúne los movimientos según el ámbito de búsqueda elegido:
+   'mes' = mes en curso (el del selector de arriba), 'otro' = otro mes concreto,
+   'rango' = rango de fechas (por fecha real del banco), 'todos' = todos los meses. */
+async function movimientosDelAmbito(){
+  const f = MOV_FILTER;
+  if(f.scope==='otro' && f.otroMes) return (await loadMonthTx(f.otroMes)).filter(t=>!t.voided);
+  if(f.scope==='rango' || f.scope==='todos'){
+    let keys = (await listNsKeys('tx:')).map(k=>k.slice(3)).filter(k=>/^\d{4}-\d{2}$/.test(k));
+    if(f.scope==='rango'){
+      // el mes contable puede diferir un mes de la fecha real, por eso se leen los meses de alrededor
+      if(f.desde) keys = keys.filter(k=>k >= mesDesplazadoMov(f.desde.slice(0,7),-1));
+      if(f.hasta) keys = keys.filter(k=>k <= mesDesplazadoMov(f.hasta.slice(0,7),1));
+    }
+    let out = [];
+    for(const k of keys) out = out.concat((await loadMonthTx(k)).filter(t=>!t.voided));
+    if(f.scope==='rango'){
+      if(f.desde) out = out.filter(t=>t.date>=f.desde);
+      if(f.hasta) out = out.filter(t=>t.date<=f.hasta);
+    }
+    return out;
+  }
+  return (STATE.txCache[STATE.currentMonth]||[]).filter(t=>!t.voided);
+}
+function mesDesplazadoMov(mk,d){
+  const [y,m] = mk.split('-').map(Number);
+  const dt = new Date(y, m-1+d, 1);
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+}
+function onMovScopeChange(v){
+  MOV_FILTER.scope = v;
+  const eo=document.getElementById('movOtroMes'); if(eo) eo.style.display = v==='otro'?'':'none';
+  const er=document.getElementById('movRango'); if(er) er.style.display = v==='rango'?'inline-flex':'none';
+  renderMovTable();
+}
+async function renderMovTable(){
+  const myGen = ++MOV_RENDER_GEN;
   const mk = STATE.currentMonth;
-  let tx = (STATE.txCache[mk]||[]).filter(t=>!t.voided);
+  let tx = await movimientosDelAmbito();
+  if(myGen!==MOV_RENDER_GEN || !document.getElementById('movTbody')) return;
   if(MOV_FILTER.text) tx = tx.filter(t=>t.concepto.toLowerCase().includes(MOV_FILTER.text.toLowerCase()));
   if(MOV_FILTER.grupo) tx = tx.filter(t=>t.tipo && groupOf(t.tipo)===MOV_FILTER.grupo);
   if(MOV_FILTER.tipo) tx = tx.filter(t=>t.tipo===MOV_FILTER.tipo);
   if(MOV_FILTER.onlyUncat) tx = tx.filter(t=>!t.tipo);
   if(MOV_FILTER.entidad) tx = tx.filter(t=>(t.entidad||'')===MOV_FILTER.entidad);
   tx = tx.slice().sort((a,b)=> b.date.localeCompare(a.date));
-  document.getElementById('movCount').textContent = `${tx.length} movimiento(s)`;
+  const sumaVista = tx.reduce((a,t)=>a+t.importe,0);
+  document.getElementById('movCount').textContent = `${tx.length} movimiento(s) · suma ${fmtMoney(sumaVista)}`;
   const tbody = document.getElementById('movTbody');
   if(tx.length===0){
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="big">🗒️</div>Sin movimientos que mostrar en ${MONTH_NAMES[Number(mk.split('-')[1])-1]}.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="big">🗒️</div>Sin movimientos que mostrar con estos filtros.</div></td></tr>`;
     return;
   }
   // mapa de coincidencias: manual -> movimiento del banco que se le parece
