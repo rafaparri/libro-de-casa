@@ -102,7 +102,6 @@ a{color:var(--pine);}
 .sidebar{
   width:230px; flex:none; background:var(--pine-dark); color:#fff;
   display:flex; flex-direction:column; padding:22px 16px;
-  transition:transform .25s ease;
 }
 .sidebarBackdrop{display:none;}
 .sidebar .brand{display:flex; gap:10px; align-items:center; margin-bottom:26px; padding:0 6px;}
@@ -129,7 +128,7 @@ a{color:var(--pine);}
 .topbar{
   display:flex; align-items:center; justify-content:space-between; gap:14px;
   padding:16px 28px; border-bottom:1px solid var(--line); background:var(--card);
-  position:sticky; top:0; z-index:5;
+  position:relative; z-index:5;
 }
 .topbar h2{margin:0; font-size:19px; font-weight:600;}
 .topbar .sub{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
@@ -253,6 +252,7 @@ tr:hover td{background:var(--paper-alt);}
     position:fixed; inset:0 auto 0 0; z-index:40; width:250px;
     transform:translateX(-100%); box-shadow:0 0 40px rgba(0,0,0,.25);
   }
+  .sidebar{transition:transform .25s ease;}
   .sidebar.mobileOpen{transform:translateX(0);}
   .sidebarBackdrop.show{
     display:block; position:fixed; inset:0; background:rgba(19,43,45,.45); z-index:35;
@@ -296,7 +296,7 @@ tr:hover td{background:var(--paper-alt);}
    ===================================================================== */
 .busyOverlay{
   position:fixed; inset:0; z-index:200; display:none; align-items:center; justify-content:center;
-  background:rgba(19,43,45,.32); backdrop-filter:blur(1px);
+  background:rgba(19,43,45,.32);
 }
 .busyOverlay.show{display:flex;}
 .busyBox{
@@ -424,7 +424,7 @@ tr:hover td{background:var(--paper-alt);}
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 28-oct 22:30 · admin con vigilancia</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 28-oct 23:00 · pantalla grande</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
