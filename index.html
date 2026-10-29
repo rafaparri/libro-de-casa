@@ -424,7 +424,7 @@ tr:hover td{background:var(--paper-alt);}
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 28-oct 23:00 · pantalla grande</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 29-oct 21:00 · entidades nuevas</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
@@ -1167,6 +1167,7 @@ async function loadGlobalData(){
   STATE.nonMonthly = nm;
   STATE.settings = await sGet('settings', {nominaCutoffDay: 25});
   STATE.hiddenCategories = await sGet('hidden_categories', []);
+  aplicarEntidadesExtra();
 }
 
 /* =====================================================================
@@ -1532,7 +1533,29 @@ let MOV_RENDER_GEN = 0;
 let MOV_SEL = new Set(); // ids seleccionados para cambio masivo
 const ENTIDADES = ['BSCH','BBVA','BS'];
 const ENTIDAD_NOMBRES = {BSCH:'Banco Santander', BBVA:'BBVA', BS:'Banco Sabadell'};
-function entidadOptions(sel){ return '<option value="">— Sin indicar —</option>'+ENTIDADES.map(e=>`<option value="${e}" ${sel===e?'selected':''}>${e} · ${ENTIDAD_NOMBRES[e]}</option>`).join(''); }
+const ENTIDADES_BASE = ['BSCH','BBVA','BS'];
+function aplicarEntidadesExtra(){
+  const extra = (STATE.settings && STATE.settings.entidadesExtra) || [];
+  ENTIDADES.length = 0; ENTIDADES_BASE.forEach(e=>ENTIDADES.push(e));
+  extra.forEach(x=>{ if(!ENTIDADES.includes(x.codigo)){ ENTIDADES.push(x.codigo); ENTIDAD_NOMBRES[x.codigo]=x.nombre||x.codigo; } });
+}
+function entidadOptions(sel){ return '<option value="">— Sin indicar —</option>'+ENTIDADES.map(e=>`<option value="${e}" ${sel===e?'selected':''}>${e} · ${ENTIDAD_NOMBRES[e]}</option>`).join('')+'<option value="__nueva__">➕ Añadir entidad nueva…</option>'; }
+async function onEntidadSelect(sel){
+  if(sel.value!=='__nueva__') return;
+  const prev = sel.dataset.prev || '';
+  let cod = prompt('Código corto de la nueva entidad (ej. ING, CAIXA, EFECTIVO):');
+  cod = (cod||'').trim().toUpperCase().replace(/\s+/g,'').slice(0,12);
+  if(!cod){ sel.value = prev; return; }
+  if(!ENTIDADES.includes(cod)){
+    const nombre = (prompt('Nombre completo (opcional):', cod)||cod).trim();
+    STATE.settings = STATE.settings || {};
+    STATE.settings.entidadesExtra = (STATE.settings.entidadesExtra||[]).concat([{codigo:cod, nombre}]);
+    await sSet('settings', STATE.settings);
+    aplicarEntidadesExtra();
+  }
+  sel.innerHTML = entidadOptions(cod);
+  sel.value = cod;
+}
 async function renderMovimientos(){
   const mk = STATE.currentMonth;
   const tx = await loadMonthTx(mk);
@@ -1580,7 +1603,7 @@ async function renderMovimientos(){
       <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
         <b id="movSelCount"></b>
         <span class="small">Entidad:</span>
-        <select id="bulkEntidad">${entidadOptions('')}</select>
+        <select id="bulkEntidad" onchange="onEntidadSelect(this)">${entidadOptions('')}</select>
         <button class="btn btn-primary" onclick="bulkSetEntidad()">Aplicar entidad</button>
         <span class="small" style="margin-left:8px;">Categoría:</span>
         <select id="bulkTipo"><option value="">— Elige categoría —</option>${tipoList().map(t=>`<option value="${t}">${t}</option>`).join('')}</select>
@@ -2009,7 +2032,7 @@ function openManualColumnMapping(rows, file, evt, entidad){
       <div class="field"><label>Columna: Fecha de operación</label><input type="number" id="mc_colfecha" min="0" value="0" style="width:90px;"></div>
       <div class="field"><label>Columna: Concepto</label><input type="number" id="mc_colconcepto" min="0" value="1" style="width:90px;"></div>
       <div class="field"><label>Columna: Importe</label><input type="number" id="mc_colimporte" min="0" value="2" style="width:90px;"></div>
-      <div class="field"><label>Entidad</label><select id="mc_entidad">${entidadOptions(entidad)}</select></div>
+      <div class="field"><label>Entidad</label><select id="mc_entidad" onchange="onEntidadSelect(this)">${entidadOptions(entidad)}</select></div>
     </div>
     <div class="foot">
       <button class="btn btn-ghost" onclick="cancelManualColumnMapping()">Cancelar importación</button>
@@ -2123,7 +2146,7 @@ function openManualEntry(){
     </div>
     <div class="field"><label>Concepto</label><input type="text" id="me_concepto" placeholder="Descripción del movimiento"></div>
     <div class="field"><label>Importe (€) — negativo si es gasto</label><input type="text" id="me_importe" placeholder="-45.90"></div>
-    <div class="field"><label>Entidad</label><select id="me_entidad">${entidadOptions('')}</select></div>
+    <div class="field"><label>Entidad</label><select id="me_entidad" onchange="onEntidadSelect(this)">${entidadOptions('')}</select></div>
     <div class="field"><label>Categoría</label>
       <select id="me_tipo"><option value="">— Sin categorizar —</option>${activeTipoList().map(t=>`<option value="${t}">${t}</option>`).join('')}</select>
     </div>
@@ -2183,7 +2206,7 @@ function openEditTx(id){
     <div class="field"><label>Fecha real (fecha del banco)</label><input type="date" id="et_date" value="${t.date}"></div>
     <div class="field"><label>Concepto</label><input type="text" id="et_concepto" value="${t.concepto.replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Importe (€)</label><input type="text" id="et_importe" value="${t.importe}"></div>
-    <div class="field"><label>Entidad</label><select id="et_entidad">${entidadOptions(t.entidad||'')}</select></div>
+    <div class="field"><label>Entidad</label><select id="et_entidad" onchange="onEntidadSelect(this)">${entidadOptions(t.entidad||'')}</select></div>
     <div class="field"><label>Categoría</label>
       <select id="et_tipo"><option value="">— Sin categorizar —</option>${tipoOptionsIncluding(t.tipo).map(x=>`<option value="${x}" ${t.tipo===x?'selected':''}>${x}</option>`).join('')}</select>
     </div>
