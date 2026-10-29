@@ -451,6 +451,9 @@ tr:hover td{ background:var(--paper-alt); }
 .grid{ gap:18px; }
 .two-col{ gap:18px; }
 
+.hamburgerBtn{ display:inline-flex; background:var(--card); border-radius:12px; color:var(--ink); }
+body.sideHidden .sidebar{ display:none; }
+
 /* barra inferior (solo móvil) */
 .bottomNav{ display:none; }
 .bottomNav button{ background:none; border:none; color:var(--ink-soft); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11px; font-weight:700; padding:8px 2px; flex:1; border-radius:14px; }
@@ -632,7 +635,7 @@ tr:hover td{ background:var(--paper-alt); }
   <div class="main">
     <div class="topbar">
       <div class="titleRow">
-        <button class="hamburgerBtn" onclick="openMobileSidebar()" aria-label="Abrir menú">☰</button>
+        <button class="hamburgerBtn" onclick="toggleSidebar()" aria-label="Mostrar u ocultar el menú" title="Mostrar u ocultar el menú">☰</button>
         <div>
           <h2 id="viewTitle">Resumen del mes</h2>
           <div class="sub" id="viewSub">Vista general de previsión vs. real</div>
@@ -1730,6 +1733,12 @@ async function renderDashboard(gen){
    ===================================================================== */
 
 /* ---------- Estilo de color ---------- */
+function toggleSidebar(){
+  if(window.innerWidth<=860){ openMobileSidebar(); return; }
+  const h = document.body.classList.toggle('sideHidden');
+  try{ localStorage.setItem('lc_sideHidden', h?'1':'0'); }catch(e){}
+}
+try{ if(localStorage.getItem('lc_sideHidden')==='1') document.body.classList.add('sideHidden'); }catch(e){}
 function cv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function applyChartTheme(){
   try{ Chart.defaults.color = cv('--ink-soft'); Chart.defaults.borderColor = cv('--line'); Chart.defaults.font.family = "'Plus Jakarta Sans','Inter',sans-serif"; }catch(e){}
