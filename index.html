@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F1F6F3">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("lc_theme")||"menta";}catch(e){}</script>
 <title>Libro de Casa — Control de Gastos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -324,6 +326,186 @@ tr:hover td{background:var(--paper-alt);}
 .toast-ok{background:var(--pine-dark);}
 .toast-err{background:var(--brick);}
 .toast-warn{background:var(--brass);}
+
+/* =====================================================================
+   DISEÑO 2026 — tarjetas, 4 estilos de color (data-theme) y móvil
+   ===================================================================== */
+:root, :root[data-theme="menta"]{
+  --paper:#F1F6F3; --paper-alt:#E8F0EC; --card:#FFFFFF; --ink:#0F1F1A; --ink-soft:#5A6E66;
+  --pine:#0F9D6B; --pine-dark:#07704B; --pine-pale:#D6F3E6; --brass:#F59E0B; --brass-pale:#FDEFCB;
+  --brick:#E5484D; --brick-pale:#FDE4E4; --sage:#12A36B; --sage-pale:#D9F4E7; --line:#E1EAE5;
+  --side-bg:#0C2A20; --side-ink:#E6F4EE; --bar-prev:#CDEBDD; --accent2:#F59E0B;
+  --shadow:0 1px 2px rgba(15,31,26,.04), 0 8px 24px rgba(15,31,26,.07); --ring:rgba(15,157,107,.35);
+}
+:root[data-theme="oceano"]{
+  --paper:#F2F4FC; --paper-alt:#E8EBF9; --card:#FFFFFF; --ink:#12142E; --ink-soft:#5B6082;
+  --pine:#4F46E5; --pine-dark:#3730A3; --pine-pale:#E3E2FC; --brass:#0EA5E9; --brass-pale:#D8F0FC;
+  --brick:#E5484D; --brick-pale:#FDE4E4; --sage:#0F9D6B; --sage-pale:#D9F4E7; --line:#E0E3F3;
+  --side-bg:#1B1A4A; --side-ink:#E9E8FF; --bar-prev:#D5D8F6; --accent2:#0EA5E9;
+  --shadow:0 1px 2px rgba(18,20,46,.04), 0 8px 24px rgba(40,40,120,.09); --ring:rgba(79,70,229,.35);
+}
+:root[data-theme="noche"]{
+  --paper:#0D1218; --paper-alt:#1B2430; --card:#161E28; --ink:#E9EFF6; --ink-soft:#97A6B8;
+  --pine:#34D399; --pine-dark:#6EE7B7; --pine-pale:#143B30; --brass:#FBBF24; --brass-pale:#3B3010;
+  --brick:#F87171; --brick-pale:#3F1D1F; --sage:#34D399; --sage-pale:#143B30; --line:#263241;
+  --side-bg:#090D12; --side-ink:#E9EFF6; --bar-prev:#3A4658; --accent2:#FBBF24;
+  --shadow:none; --ring:rgba(52,211,153,.45);
+}
+:root[data-theme="coral"]{
+  --paper:#FFF5EF; --paper-alt:#FFE9DE; --card:#FFFFFF; --ink:#2A1620; --ink-soft:#80626D;
+  --pine:#EA580C; --pine-dark:#B94308; --pine-pale:#FFE3D2; --brass:#8B5CF6; --brass-pale:#EBE2FD;
+  --brick:#DC2626; --brick-pale:#FDE2E2; --sage:#15A057; --sage-pale:#D9F4E4; --line:#F5E0D3;
+  --side-bg:#2D1B3F; --side-ink:#F6ECFF; --bar-prev:#F6D2BF; --accent2:#8B5CF6;
+  --shadow:0 1px 2px rgba(42,22,32,.04), 0 8px 24px rgba(120,50,20,.09); --ring:rgba(234,88,12,.35);
+}
+html{ -webkit-text-size-adjust:100%; }
+body{ font-family:'Plus Jakarta Sans','Inter',system-ui,sans-serif; font-size:15px; background:var(--paper); color:var(--ink); }
+.serif,.sectionTitle h3,.modal h3{ font-family:'Plus Jakarta Sans','Inter',sans-serif; }
+.mono,.statNum,.amt,.monthPicker .label{ font-family:'Plus Jakarta Sans','Inter',sans-serif; font-variant-numeric:tabular-nums; }
+::selection{ background:var(--pine-pale); }
+a{ color:var(--pine); }
+.small{ font-size:12.5px; }
+
+/* superficies */
+.card{ background:var(--card); border:1px solid var(--line); border-radius:20px; padding:20px 22px; box-shadow:var(--shadow); }
+:root[data-theme="noche"] .card{ border-color:var(--line); }
+.card h3{ font-size:12.5px; letter-spacing:.06em; font-weight:700; }
+.sectionTitle h3{ font-size:17px; font-weight:800; letter-spacing:-.01em; }
+.modal,.busyBox{ background:var(--card); color:var(--ink); border-radius:22px; }
+.modal h3{ font-weight:800; }
+.modalBg{ background:rgba(8,12,20,.55); }
+.field input,.field select,.toolbar input[type=text],.toolbar input[type=search],.toolbar select,
+.field input:focus,.field select:focus{ background:var(--card); color:var(--ink); border-radius:12px; border:1px solid var(--line); }
+.field input,.field select{ padding:12px 14px; font-size:15px; }
+.field input:focus,.field select:focus,.toolbar input:focus,.toolbar select:focus{ outline:3px solid var(--ring); outline-offset:0; border-color:var(--pine); }
+.toolbar input[type=text],.toolbar input[type=search],.toolbar select{ padding:10px 12px; font-size:14px; }
+.monthPicker button:hover{ background:var(--card); }
+#sidebarHogarSwitchSelect option{ color:#111; background:#fff; }
+select option{ color:var(--ink); background:var(--card); }
+.note{ border-radius:14px; }
+
+/* botones */
+.btn{ border-radius:12px; padding:11px 18px; font-size:14.5px; font-weight:700; transition:transform .12s ease, box-shadow .12s ease, background .12s ease; }
+.btn:active{ transform:scale(.97); }
+.btn-primary{ background:linear-gradient(135deg,var(--pine),var(--pine-dark)); color:#fff; box-shadow:0 4px 14px var(--ring); }
+:root[data-theme="noche"] .btn-primary{ color:#06241A; background:var(--pine); }
+.btn-primary:hover{ background:linear-gradient(135deg,var(--pine),var(--pine-dark)); filter:brightness(1.06); }
+.btn-ghost{ background:var(--card); border:1px solid var(--line); color:var(--ink); }
+.btn-ghost:hover{ background:var(--paper-alt); }
+.btn-sm{ border-radius:10px; padding:7px 12px; font-size:13px; }
+.btn-danger{ background:var(--brick); }
+.iconBtn{ border-radius:10px; width:32px; height:32px; background:var(--card); color:var(--ink-soft); border-color:var(--line); }
+.iconBtn:hover{ background:var(--paper-alt); }
+.tag{ background:var(--pine-pale); color:var(--pine-dark); }
+:root[data-theme="oceano"] .tag,:root[data-theme="coral"] .tag,:root[data-theme="menta"] .tag{ color:var(--pine-dark); }
+.catInlineSelect{ background-color:var(--pine-pale); color:var(--pine-dark); border-radius:100px; padding:6px 10px; }
+.catInlineSelect.uncatSelect{ background-color:var(--brick-pale); color:var(--brick); border-color:transparent; }
+.tabs{ display:inline-flex; gap:4px; background:var(--paper-alt); padding:4px; border-radius:14px; border:none; margin-bottom:18px; }
+.tabBtn{ border:none; border-radius:10px; padding:9px 16px; font-weight:700; color:var(--ink-soft); }
+.tabBtn.active{ background:var(--card); color:var(--pine); box-shadow:var(--shadow); }
+th{ border-bottom:1px solid var(--line); }
+td{ border-bottom:1px solid var(--line); }
+tr:hover td{ background:var(--paper-alt); }
+.summaryBar{ background:var(--paper-alt); height:10px; border-radius:10px; }
+.sectionTitle{ margin:30px 0 14px; }
+
+/* barra lateral */
+.sidebar{ background:var(--side-bg); color:var(--side-ink); transition:none; position:sticky; top:0; height:100vh; overflow-y:auto; align-self:flex-start; }
+.sidebar .brand .seal{ background:linear-gradient(135deg,var(--pine),var(--accent2)); border-radius:14px; font-family:inherit; font-weight:800; color:#fff; }
+:root[data-theme="noche"] .sidebar .brand .seal{ color:#06241A; }
+.navBtn{ color:var(--side-ink); opacity:.78; padding:11px 12px; border-radius:12px; font-size:14.5px; font-weight:600; }
+.navBtn:hover{ background:rgba(255,255,255,.08); opacity:1; color:var(--side-ink); }
+.navBtn.active{ background:var(--pine); color:#fff; opacity:1; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,.25); }
+:root[data-theme="noche"] .navBtn.active{ color:#06241A; }
+.sidebar .btn-ghost{ background:rgba(255,255,255,.07); color:var(--side-ink); border-color:rgba(255,255,255,.16); }
+.sidebar .btn-ghost:hover{ background:rgba(255,255,255,.14); }
+.sidebar .field label{ color:var(--side-ink); }
+.userBox{ border-top-color:rgba(255,255,255,.14); }
+.themePick{ margin:0 0 12px; }
+.themePick label{ display:block; font-size:10.5px; color:var(--side-ink); opacity:.7; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+.themeDots{ display:flex; gap:10px; }
+.themeDots button{ width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.35); padding:0; box-shadow:0 2px 6px rgba(0,0,0,.3); }
+.themeDots button.on{ border-color:#fff; box-shadow:0 0 0 3px rgba(255,255,255,.35); }
+
+/* cabecera */
+.topbar{ background:transparent; border-bottom:none; padding:22px 28px 6px; }
+.topbar h2{ font-size:24px; font-weight:800; letter-spacing:-.02em; }
+.topbar .sub{ font-size:13px; }
+.monthPicker{ background:var(--card); border:1px solid var(--line); border-radius:100px; padding:4px; box-shadow:var(--shadow); }
+.monthPicker button{ width:34px; height:34px; border-radius:50%; font-size:17px; color:var(--pine); }
+.monthPicker button:hover{ background:var(--pine-pale); }
+.monthPicker .label{ font-weight:700; font-size:14px; }
+.content{ padding:16px 28px 60px; }
+
+/* tarjetas de cifras del resumen */
+.grid-4 > .card{ position:relative; padding:20px 20px 18px 20px; overflow:hidden; }
+.grid-4 > .card::before{
+  content:"↗"; display:flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:12px;
+  background:var(--sage-pale); color:var(--sage); font-size:19px; font-weight:800; margin-bottom:12px;
+}
+.grid-4 > .card:nth-child(2)::before{ content:"↘"; background:var(--brick-pale); color:var(--brick); }
+.grid-4 > .card:nth-child(3)::before{ content:"◆"; background:var(--brass-pale); color:var(--brass); font-size:15px; }
+.grid-4 > .card:nth-child(4)::before{ content:"="; background:var(--pine-pale); color:var(--pine); }
+.statNum{ font-size:30px; font-weight:800; letter-spacing:-.02em; margin-top:4px; }
+.statSub{ font-size:12.5px; line-height:1.4; }
+.grid{ gap:18px; }
+.two-col{ gap:18px; }
+
+/* barra inferior (solo móvil) */
+.bottomNav{ display:none; }
+.bottomNav button{ background:none; border:none; color:var(--ink-soft); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11px; font-weight:700; padding:8px 2px; flex:1; border-radius:14px; }
+.bottomNav svg{ width:24px; height:24px; stroke:currentColor; fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+.bottomNav button.active{ color:var(--pine); }
+.bottomNav button.active svg{ stroke-width:2.4; }
+
+/* móvil */
+@media(max-width:860px){
+  body{ font-size:15.5px; }
+  .topbar{ padding:14px 14px 4px; }
+  .topbar h2{ font-size:20px; }
+  .hamburgerBtn{ display:none; }
+  .content{ padding:10px 14px calc(96px + env(safe-area-inset-bottom)); }
+  .card{ border-radius:18px; padding:16px; }
+  .grid-4{ grid-template-columns:1fr 1fr; gap:12px; }
+  .grid-4 > .card{ padding:14px; }
+  .grid-4 > .card::before{ width:32px; height:32px; font-size:16px; margin-bottom:8px; }
+  .statNum{ font-size:21px; }
+  .sidebar{ transition:transform .25s ease; width:290px; padding-bottom:30px; overflow-y:auto; z-index:60; position:fixed; height:100%; }
+  .sidebarBackdrop.show{ z-index:55; }
+  .bottomNav{
+    display:flex; position:fixed; left:0; right:0; bottom:0; z-index:50; background:var(--card);
+    border-top:1px solid var(--line); padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+    box-shadow:0 -6px 24px rgba(0,0,0,.08);
+  }
+  .toastContainer, .toast{ bottom:90px; }
+  .toolbar .btn, .toolbar .fileBtn{ flex:1 1 calc(50% - 8px); width:auto; font-size:13.5px; padding:12px 8px; }
+  .toolbar input[type=text],.toolbar input[type=search]{ flex:1 1 100%; width:100%; font-size:15px; padding:12px 14px; }
+  .toolbar select{ flex:1 1 calc(50% - 8px); width:auto; min-width:0; font-size:14.5px; padding:12px 10px; }
+  .toolbar #movScope{ flex:1 1 100%; }
+  .tabs{ display:flex; width:100%; }
+  .tabBtn{ flex:1; padding:11px 6px; }
+  .btn{ min-height:44px; }
+  .iconBtn{ width:44px; height:44px; font-size:16px; }
+  /* movimientos como tarjetas */
+  .card:has(.movTable){ padding:6px 10px; overflow:visible; }
+  .movTable{ min-width:0 !important; }
+  .movTable thead{ display:none; }
+  .movTable, .movTable tbody{ display:block; }
+  .movTable tr.movRow{
+    display:grid; grid-template-columns:34px auto auto 1fr; grid-template-areas:"sel con con con" ". date ent imp" ". cat cat cat" ". act act act";
+    gap:6px 10px; align-items:center; padding:14px 4px; border-bottom:1px solid var(--line);
+  }
+  .movTable tr.movRow:hover td{ background:none; }
+  .movTable td{ display:block; border:none; padding:0; }
+  .c-sel{ grid-area:sel; } .c-concepto{ grid-area:con; font-weight:700; font-size:15px; word-break:break-word; }
+  .c-date{ grid-area:date; font-size:13px; color:var(--ink-soft); } .c-ent{ grid-area:ent; }
+  .c-imp{ grid-area:imp; font-size:18px; font-weight:800; text-align:right; }
+  .c-cat{ grid-area:cat; } .c-cat select{ max-width:none; width:100%; padding:10px 12px; font-size:14px; }
+  .c-act{ grid-area:act; } .movTable td.c-grupo,.movTable td.c-origen{ display:none; }
+  .c-act .rowActions{ gap:10px; }
+  .c-sel input{ width:24px !important; height:24px !important; }
+}
+@media(max-width:420px){ .grid-4{ grid-template-columns:1fr 1fr; } .statNum{ font-size:19px; } }
 </style>
 </head>
 <body>
@@ -416,6 +598,15 @@ tr:hover td{background:var(--paper-alt);}
     <div class="userBox">
       <div class="who" id="whoName">—</div>
       <div class="role" id="whoRole">—</div>
+    <div class="themePick">
+      <label>Estilo de color</label>
+      <div class="themeDots" id="themeDots">
+        <button data-t="menta" title="Menta" style="background:linear-gradient(135deg,#0F9D6B,#0C2A20)" onclick="setTheme('menta')"></button>
+        <button data-t="oceano" title="Océano" style="background:linear-gradient(135deg,#4F46E5,#1B1A4A)" onclick="setTheme('oceano')"></button>
+        <button data-t="noche" title="Noche" style="background:linear-gradient(135deg,#34D399,#0D1218)" onclick="setTheme('noche')"></button>
+        <button data-t="coral" title="Coral" style="background:linear-gradient(135deg,#EA580C,#2D1B3F)" onclick="setTheme('coral')"></button>
+      </div>
+    </div>
       <div class="field hidden" id="sidebarHogarSwitchWrap" style="margin-bottom:8px;">
         <label style="font-size:10.5px; color:rgba(255,255,255,.65); text-transform:uppercase; letter-spacing:.04em;">Cambiar de libro</label>
         <div style="display:flex; gap:6px;">
@@ -424,13 +615,20 @@ tr:hover td{background:var(--paper-alt);}
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 29-oct 21:30 · entidades en administración</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 29-oct 22:30 · diseño tarjetas + 4 estilos</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
     </div>
   </aside>
 
+  <nav class="bottomNav" id="bottomNav">
+    <button class="bnBtn active" data-view="dashboard" onclick="go('dashboard')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Resumen</button>
+    <button class="bnBtn" data-view="movimientos" onclick="go('movimientos')"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>Movimientos</button>
+    <button class="bnBtn" data-view="presupuesto" onclick="go('presupuesto')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.4 6.4"/></svg>Presupuesto</button>
+    <button class="bnBtn" data-view="informes" onclick="go('informes')"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Informes</button>
+    <button class="bnBtn" onclick="openMobileSidebar()"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Más</button>
+  </nav>
   <div class="main">
     <div class="topbar">
       <div class="titleRow">
@@ -761,6 +959,7 @@ let STATE = {
 const CHART_INSTANCES = {};
 let PENDING_IMPORT = null; // datos de una importación esperando mapeo manual de columnas
 function renderChart(canvasId, config){
+  applyChartTheme();
   const canvas = document.getElementById(canvasId);
   if(!canvas) return null; // la vista cambió antes de llegar aquí: no hacer nada
   if(CHART_INSTANCES[canvasId]){
@@ -1332,6 +1531,7 @@ async function go(view){
   const myGen = ++STATE.renderGen;
   closeMobileSidebar();
   document.querySelectorAll('.navBtn').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
+  document.querySelectorAll('.bnBtn').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   document.getElementById('viewTitle').textContent = VIEW_META[view].title;
   document.getElementById('viewSub').textContent = VIEW_META[view].sub;
   document.getElementById('monthPickerBox').style.visibility = (view==='categorias'||view==='admin') ? 'hidden' : 'visible';
@@ -1481,8 +1681,8 @@ async function renderDashboard(gen){
     data:{
       labels: rowsWithData.map(r=>r.tipo),
       datasets:[
-        {label:'Previsto', data:rowsWithData.map(r=>r.prevision), backgroundColor:'#FFD9C7', borderRadius:4},
-        {label:'Real', data:rowsWithData.map(r=>Math.abs(r.real)), backgroundColor:'#0E8C8C', borderRadius:4}
+        {label:'Previsto', data:rowsWithData.map(r=>r.prevision), backgroundColor:cv('--bar-prev'), borderRadius:4},
+        {label:'Real', data:rowsWithData.map(r=>Math.abs(r.real)), backgroundColor:cv('--pine'), borderRadius:4}
       ]
     },
     options:{ responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}, plugins:{legend:{position:'top'}} }
@@ -1517,8 +1717,8 @@ async function renderDashboard(gen){
     data:{
       labels: months.map(mo=>MONTH_NAMES[Number(mo.split('-')[1])-1].slice(0,3)+' '+mo.split('-')[0].slice(2)),
       datasets:[
-        {label:'Gasto previsto', data:evo.map(e=>e.previstoGasto), borderColor:'#FF6B47', backgroundColor:'transparent', tension:.3},
-        {label:'Gasto real', data:evo.map(e=>e.gastos), borderColor:'#0A5D63', backgroundColor:'transparent', tension:.3, borderWidth:2}
+        {label:'Gasto previsto', data:evo.map(e=>e.previstoGasto), borderColor:cv('--brass'), backgroundColor:'transparent', tension:.3},
+        {label:'Gasto real', data:evo.map(e=>e.gastos), borderColor:cv('--pine'), backgroundColor:'transparent', tension:.3, borderWidth:2}
       ]
     },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top', labels:{boxWidth:10,font:{size:11}}}} }
@@ -1528,6 +1728,25 @@ async function renderDashboard(gen){
 /* =====================================================================
    MOVIMIENTOS
    ===================================================================== */
+
+/* ---------- Estilo de color ---------- */
+function cv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function applyChartTheme(){
+  try{ Chart.defaults.color = cv('--ink-soft'); Chart.defaults.borderColor = cv('--line'); Chart.defaults.font.family = "'Plus Jakarta Sans','Inter',sans-serif"; }catch(e){}
+}
+function markTheme(){
+  const t = document.documentElement.dataset.theme || 'menta';
+  document.querySelectorAll('#themeDots button').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
+  const m = document.querySelector('meta[name=theme-color]'); if(m) m.setAttribute('content', cv('--paper'));
+}
+function setTheme(t){
+  document.documentElement.dataset.theme = t;
+  try{ localStorage.setItem('lc_theme', t); }catch(e){}
+  markTheme(); applyChartTheme();
+  try{ if(STATE.user && STATE.view) go(STATE.view); }catch(e){}
+}
+markTheme(); applyChartTheme();
+
 let MOV_FILTER = {text:'', tipo:'', grupo:'', onlyUncat:false, entidad:'', scope:'mes', otroMes:'', desde:'', hasta:''};
 let MOV_RENDER_GEN = 0;
 let MOV_SEL = new Set(); // ids seleccionados para cambio masivo
@@ -1602,7 +1821,7 @@ async function renderMovimientos(){
       </div>
     </div>
     <div class="card" style="padding:0;">
-      <table id="movTable">
+      <table class="movTable" id="movTable">
         <thead><tr><th style="width:34px;"><input type="checkbox" id="movSelAll" title="Seleccionar todos los que se ven" onchange="toggleSelAllMov(this.checked)" style="width:20px;height:20px;"></th><th>Fecha</th><th>Concepto</th><th style="text-align:right;">Importe</th><th>Entidad</th><th>Categoría</th><th>Grupo</th><th>Origen</th><th></th></tr></thead>
         <tbody id="movTbody"></tbody>
       </table>
@@ -1683,16 +1902,16 @@ async function renderMovTable(){
         ${tipoOptionsIncluding(t.tipo).map(x=>`<option value="${x}" ${t.tipo===x?'selected':''}>${x}</option>`).join('')}
       </select>`;
     return `
-    <tr>
-      <td><input type="checkbox" style="width:20px;height:20px;" ${MOV_SEL.has(t.id)?'checked':''} onchange="toggleSelMov('${t.id}', this.checked)"></td>
-      <td class="mono">${fmtDate(t.date)}${shifted?`<br><span class="tag muted" title="Mes contable">→ ${monthInputToLabel(acc)}</span>`:''}</td>
-      <td>${t.concepto}${t.splitFrom?'<span class="tag muted" style="margin-left:6px;">dividido</span>':''}${dupNote}</td>
-      <td class="amt ${t.importe<0?'neg':'pos'}">${fmtMoney(t.importe)}</td>
-      <td class="small mono" title="${t.entidad?ENTIDAD_NOMBRES[t.entidad]||'':''}">${t.entidad||'—'}</td>
-      <td>${catSelect}</td>
-      <td class="small">${t.tipo?groupOf(t.tipo):'—'}</td>
-      <td class="small">${t.origin==='import'?'Banco':t.origin==='manual'?'Manual':'División'}</td>
-      <td>
+    <tr class="movRow">
+      <td class="c-sel"><input type="checkbox" style="width:20px;height:20px;" ${MOV_SEL.has(t.id)?'checked':''} onchange="toggleSelMov('${t.id}', this.checked)"></td>
+      <td class="mono c-date">${fmtDate(t.date)}${shifted?`<br><span class="tag muted" title="Mes contable">→ ${monthInputToLabel(acc)}</span>`:''}</td>
+      <td class="c-concepto">${t.concepto}${t.splitFrom?'<span class="tag muted" style="margin-left:6px;">dividido</span>':''}${dupNote}</td>
+      <td class="amt c-imp ${t.importe<0?'neg':'pos'}">${fmtMoney(t.importe)}</td>
+      <td class="small mono c-ent" title="${t.entidad?ENTIDAD_NOMBRES[t.entidad]||'':''}">${t.entidad||'—'}</td>
+      <td class="c-cat">${catSelect}</td>
+      <td class="small c-grupo">${t.tipo?groupOf(t.tipo):'—'}</td>
+      <td class="small c-origen">${t.origin==='import'?'Banco':t.origin==='manual'?'Manual':'División'}</td>
+      <td class="c-act">
         <div class="rowActions">
           <button class="iconBtn" title="Editar" onclick="openEditTx('${t.id}')">✎</button>
           <button class="iconBtn" title="Dividir" onclick="openSplitTx('${t.id}')">⑃</button>
@@ -2574,7 +2793,7 @@ function borradorBannerHtml(mk, bor){
   if(!bor || bor.revisado) return '';
   const li = arr => arr.map(x=>`<li>${x}</li>`).join('');
   const f = d => new Date(d).toLocaleDateString('es-ES');
-  return `<div class="card" style="border:2px solid #d9a400; background:#fff8dc; font-size:15px; line-height:1.5;">
+  return `<div class="card" style="border:2px solid #d9a400; background:#fff8dc; color:#3b2f00; font-size:15px; line-height:1.5;">
     <b style="font-size:17px;">📝 BORRADOR de previsión de ${monthInputToLabel(mk)} — pendiente de revisar</b>
     <p style="margin:6px 0;">Generado el ${f(bor.generadoEl)} con el <b>máximo de los últimos ${bor.meses.length} meses</b> de cada categoría (${bor.meses.map(m=>monthInputToLabel(m)).join(', ')}). Todas las categorías están incluidas, también las que no tuvieron gastos. Cambia lo que quieras en la columna "Previsión base" y pulsa <b>Guardar previsión</b>. La columna de la derecha explica cómo sale cada cifra.</p>
     ${bor.nmTocan.length?`<p style="margin:6px 0 2px;"><b>Pagos no mensuales que tocan este mes:</b></p><ul style="margin:0 0 6px 18px;">${li(bor.nmTocan.map(p=>`${p.nombre} (${p.tipo}): ${fmtMoney(p.importe)}`))}</ul>`:'<p style="margin:6px 0;"><b>Este mes no toca ningún pago no mensual.</b></p>'}
@@ -2759,8 +2978,8 @@ async function renderPresupuesto(){
     data:{
       labels: comparGroups.map(g=>g.grupo),
       datasets:[
-        {label:'Previsto', data:comparGroups.map(g=>g.previsto), backgroundColor:'#FFD9C7', borderRadius:4},
-        {label:'Real', data:comparGroups.map(g=>g.real), backgroundColor:'#0E8C8C', borderRadius:4}
+        {label:'Previsto', data:comparGroups.map(g=>g.previsto), backgroundColor:cv('--bar-prev'), borderRadius:4},
+        {label:'Real', data:comparGroups.map(g=>g.real), backgroundColor:cv('--pine'), borderRadius:4}
       ]
     },
     options:{responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}, plugins:{legend:{position:'top'}}}
@@ -3484,8 +3703,8 @@ async function renderReportBody(){
     data:{
       labels: rowsConDatos.map(r=>r.tipo),
       datasets:[
-        {label:'Previsto', data:rowsConDatos.map(r=>r.prevision), backgroundColor:'#FFD9C7', borderRadius:4},
-        {label:'Real', data:rowsConDatos.map(r=>Math.abs(r.real)), backgroundColor:'#0E8C8C', borderRadius:4}
+        {label:'Previsto', data:rowsConDatos.map(r=>r.prevision), backgroundColor:cv('--bar-prev'), borderRadius:4},
+        {label:'Real', data:rowsConDatos.map(r=>Math.abs(r.real)), backgroundColor:cv('--pine'), borderRadius:4}
       ]
     },
     options:{responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}, plugins:{legend:{position:'top'}}}
@@ -3495,8 +3714,8 @@ async function renderReportBody(){
     data:{
       labels: ritmo.labels,
       datasets:[
-        {label:'Real acumulado', data:ritmo.realAcumulado, borderColor:'#0A5D63', backgroundColor:'#0A5D6322', fill:true, tension:.25, borderWidth:2.5, spanGaps:false},
-        {label:'Previsto (ritmo lineal)', data:ritmo.previstoAcumulado, borderColor:'#FF6B47', backgroundColor:'transparent', borderDash:[6,4], tension:0, borderWidth:2, pointRadius:0}
+        {label:'Real acumulado', data:ritmo.realAcumulado, borderColor:cv('--pine'), backgroundColor:cv('--pine')+'22', fill:true, tension:.25, borderWidth:2.5, spanGaps:false},
+        {label:'Previsto (ritmo lineal)', data:ritmo.previstoAcumulado, borderColor:cv('--brass'), backgroundColor:'transparent', borderDash:[6,4], tension:0, borderWidth:2, pointRadius:0}
       ]
     },
     options:{
@@ -3712,8 +3931,8 @@ async function renderAnalisis(){
     data:{
       labels: months.map(mo=>MONTH_NAMES[Number(mo.split('-')[1])-1].slice(0,3)+' '+mo.split('-')[0].slice(2)),
       datasets:[
-        {label:'Previsto', data:evoData.map(e=>e.totalPrevisionGastos), borderColor:'#FF6B47', backgroundColor:'transparent', tension:.3},
-        {label:'Real', data:evoData.map(e=>e.totalReal), borderColor:'#0A5D63', backgroundColor:'transparent', tension:.3, borderWidth:2}
+        {label:'Previsto', data:evoData.map(e=>e.totalPrevisionGastos), borderColor:cv('--brass'), backgroundColor:'transparent', tension:.3},
+        {label:'Real', data:evoData.map(e=>e.totalReal), borderColor:cv('--pine'), backgroundColor:'transparent', tension:.3, borderWidth:2}
       ]
     },
     options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top', labels:{boxWidth:10,font:{size:11}}}}}
@@ -4064,8 +4283,8 @@ function simRender(){
     data:{
       labels: proj.months.map(mo=>monthInputToLabel(mo.mk)),
       datasets:[
-        {label:'Saldo de cuenta', data:proj.months.map(mo=>mo.cuentaAcum), borderColor:'#0E8C8C', backgroundColor:'#0E8C8C22', fill:true, tension:.3, borderWidth:2.5},
-        {label:'Ahorro acumulado', data:proj.months.map(mo=>mo.ahorroAcum), borderColor:'#FF6B47', backgroundColor:'transparent', tension:.3, borderWidth:2, borderDash:[5,4]}
+        {label:'Saldo de cuenta', data:proj.months.map(mo=>mo.cuentaAcum), borderColor:cv('--pine'), backgroundColor:cv('--pine')+'22', fill:true, tension:.3, borderWidth:2.5},
+        {label:'Ahorro acumulado', data:proj.months.map(mo=>mo.ahorroAcum), borderColor:cv('--brass'), backgroundColor:'transparent', tension:.3, borderWidth:2, borderDash:[5,4]}
       ]
     },
     options:{
