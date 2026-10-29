@@ -424,7 +424,7 @@ tr:hover td{background:var(--paper-alt);}
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 29-oct 21:00 · entidades nuevas</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 29-oct 21:30 · entidades en administración</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
@@ -1533,29 +1533,18 @@ let MOV_RENDER_GEN = 0;
 let MOV_SEL = new Set(); // ids seleccionados para cambio masivo
 const ENTIDADES = ['BSCH','BBVA','BS'];
 const ENTIDAD_NOMBRES = {BSCH:'Banco Santander', BBVA:'BBVA', BS:'Banco Sabadell'};
-const ENTIDADES_BASE = ['BSCH','BBVA','BS'];
+const ENTIDADES_BASE = [{codigo:'BSCH',nombre:'Banco Santander'},{codigo:'BBVA',nombre:'BBVA'},{codigo:'BS',nombre:'Banco Sabadell'}];
+function listaEntidades(){
+  const st = STATE.settings || {};
+  if(Array.isArray(st.entidades)) return st.entidades;
+  return ENTIDADES_BASE.concat(st.entidadesExtra||[]);
+}
 function aplicarEntidadesExtra(){
-  const extra = (STATE.settings && STATE.settings.entidadesExtra) || [];
-  ENTIDADES.length = 0; ENTIDADES_BASE.forEach(e=>ENTIDADES.push(e));
-  extra.forEach(x=>{ if(!ENTIDADES.includes(x.codigo)){ ENTIDADES.push(x.codigo); ENTIDAD_NOMBRES[x.codigo]=x.nombre||x.codigo; } });
+  ENTIDADES.length = 0;
+  for(const k in ENTIDAD_NOMBRES) delete ENTIDAD_NOMBRES[k];
+  listaEntidades().forEach(x=>{ ENTIDADES.push(x.codigo); ENTIDAD_NOMBRES[x.codigo]=x.nombre||x.codigo; });
 }
-function entidadOptions(sel){ return '<option value="">— Sin indicar —</option>'+ENTIDADES.map(e=>`<option value="${e}" ${sel===e?'selected':''}>${e} · ${ENTIDAD_NOMBRES[e]}</option>`).join('')+'<option value="__nueva__">➕ Añadir entidad nueva…</option>'; }
-async function onEntidadSelect(sel){
-  if(sel.value!=='__nueva__') return;
-  const prev = sel.dataset.prev || '';
-  let cod = prompt('Código corto de la nueva entidad (ej. ING, CAIXA, EFECTIVO):');
-  cod = (cod||'').trim().toUpperCase().replace(/\s+/g,'').slice(0,12);
-  if(!cod){ sel.value = prev; return; }
-  if(!ENTIDADES.includes(cod)){
-    const nombre = (prompt('Nombre completo (opcional):', cod)||cod).trim();
-    STATE.settings = STATE.settings || {};
-    STATE.settings.entidadesExtra = (STATE.settings.entidadesExtra||[]).concat([{codigo:cod, nombre}]);
-    await sSet('settings', STATE.settings);
-    aplicarEntidadesExtra();
-  }
-  sel.innerHTML = entidadOptions(cod);
-  sel.value = cod;
-}
+function entidadOptions(sel){ return '<option value="">— Sin indicar —</option>'+ENTIDADES.map(e=>`<option value="${e}" ${sel===e?'selected':''}>${e} · ${ENTIDAD_NOMBRES[e]}</option>`).join(''); }
 async function renderMovimientos(){
   const mk = STATE.currentMonth;
   const tx = await loadMonthTx(mk);
@@ -1603,7 +1592,7 @@ async function renderMovimientos(){
       <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
         <b id="movSelCount"></b>
         <span class="small">Entidad:</span>
-        <select id="bulkEntidad" onchange="onEntidadSelect(this)">${entidadOptions('')}</select>
+        <select id="bulkEntidad">${entidadOptions('')}</select>
         <button class="btn btn-primary" onclick="bulkSetEntidad()">Aplicar entidad</button>
         <span class="small" style="margin-left:8px;">Categoría:</span>
         <select id="bulkTipo"><option value="">— Elige categoría —</option>${tipoList().map(t=>`<option value="${t}">${t}</option>`).join('')}</select>
@@ -2032,7 +2021,7 @@ function openManualColumnMapping(rows, file, evt, entidad){
       <div class="field"><label>Columna: Fecha de operación</label><input type="number" id="mc_colfecha" min="0" value="0" style="width:90px;"></div>
       <div class="field"><label>Columna: Concepto</label><input type="number" id="mc_colconcepto" min="0" value="1" style="width:90px;"></div>
       <div class="field"><label>Columna: Importe</label><input type="number" id="mc_colimporte" min="0" value="2" style="width:90px;"></div>
-      <div class="field"><label>Entidad</label><select id="mc_entidad" onchange="onEntidadSelect(this)">${entidadOptions(entidad)}</select></div>
+      <div class="field"><label>Entidad</label><select id="mc_entidad">${entidadOptions(entidad)}</select></div>
     </div>
     <div class="foot">
       <button class="btn btn-ghost" onclick="cancelManualColumnMapping()">Cancelar importación</button>
@@ -2146,7 +2135,7 @@ function openManualEntry(){
     </div>
     <div class="field"><label>Concepto</label><input type="text" id="me_concepto" placeholder="Descripción del movimiento"></div>
     <div class="field"><label>Importe (€) — negativo si es gasto</label><input type="text" id="me_importe" placeholder="-45.90"></div>
-    <div class="field"><label>Entidad</label><select id="me_entidad" onchange="onEntidadSelect(this)">${entidadOptions('')}</select></div>
+    <div class="field"><label>Entidad</label><select id="me_entidad">${entidadOptions('')}</select></div>
     <div class="field"><label>Categoría</label>
       <select id="me_tipo"><option value="">— Sin categorizar —</option>${activeTipoList().map(t=>`<option value="${t}">${t}</option>`).join('')}</select>
     </div>
@@ -2206,7 +2195,7 @@ function openEditTx(id){
     <div class="field"><label>Fecha real (fecha del banco)</label><input type="date" id="et_date" value="${t.date}"></div>
     <div class="field"><label>Concepto</label><input type="text" id="et_concepto" value="${t.concepto.replace(/"/g,'&quot;')}"></div>
     <div class="field"><label>Importe (€)</label><input type="text" id="et_importe" value="${t.importe}"></div>
-    <div class="field"><label>Entidad</label><select id="et_entidad" onchange="onEntidadSelect(this)">${entidadOptions(t.entidad||'')}</select></div>
+    <div class="field"><label>Entidad</label><select id="et_entidad">${entidadOptions(t.entidad||'')}</select></div>
     <div class="field"><label>Categoría</label>
       <select id="et_tipo"><option value="">— Sin categorizar —</option>${tipoOptionsIncluding(t.tipo).map(x=>`<option value="${x}" ${t.tipo===x?'selected':''}>${x}</option>`).join('')}</select>
     </div>
@@ -4885,6 +4874,38 @@ async function deleteCategoria(tipo){
 /* =====================================================================
    ADMINISTRACIÓN (usuarios + auditoría)
    ===================================================================== */
+
+async function anadirEntidad(){
+  const cod = (document.getElementById('ent_cod').value||'').trim().toUpperCase().replace(/\s+/g,'');
+  const nom = (document.getElementById('ent_nom').value||'').trim() || cod;
+  if(!cod){ await uiAlert('Escribe un código corto para la entidad.'); return; }
+  if(ENTIDADES.includes(cod)){ await uiAlert('Ya existe una entidad con el código '+cod+'.'); return; }
+  STATE.settings = STATE.settings || {};
+  STATE.settings.entidades = listaEntidades().concat([{codigo:cod, nombre:nom}]);
+  await sSet('settings', STATE.settings);
+  aplicarEntidadesExtra();
+  await addAudit('Entidad añadida', cod);
+  await go('admin');
+}
+async function quitarEntidad(cod){
+  let usos = 0, meses = [];
+  const keys = await listNsKeys('tx:');
+  for(const k of keys){
+    const tx = await loadMonthTx(k.slice(3));
+    const n = tx.filter(t=>t.entidad===cod).length;
+    if(n){ usos += n; meses.push(k.slice(3)); }
+  }
+  if(usos>0){
+    await uiAlert('No se puede quitar la entidad '+cod+': está en uso en '+usos+' movimiento'+(usos===1?'':'s')+' ('+meses.slice(0,6).join(', ')+(meses.length>6?'…':'')+'). Cámbialos a otra entidad desde Movimientos (selección múltiple) y vuelve a intentarlo.');
+    return;
+  }
+  if(!await uiConfirm('¿Quitar la entidad '+cod+' de la lista?')) return;
+  STATE.settings.entidades = listaEntidades().filter(x=>x.codigo!==cod);
+  await sSet('settings', STATE.settings);
+  aplicarEntidadesExtra();
+  await addAudit('Entidad quitada', cod);
+  await go('admin');
+}
 async function renderAdmin(){
   const el = document.getElementById('content');
   const isAdmin = STATE.user.role==='admin';
@@ -4927,6 +4948,22 @@ async function renderAdmin(){
         </tbody>
       </table>
     </div>
+
+    ${isAdmin ? `
+    <div class="sectionTitle"><h3>Entidades (bancos / cuentas)</h3></div>
+    <div class="card">
+      <p class="small" style="margin-top:0;">Lista de entidades que aparece al crear o editar movimientos. Puedes añadir las que necesites y quitar las que no uses. No se puede quitar una entidad que tenga movimientos.</p>
+      <table>
+        <thead><tr><th>Código</th><th>Nombre</th><th></th></tr></thead>
+        <tbody>${listaEntidades().map(x=>`<tr><td class="mono">${x.codigo}</td><td>${x.nombre||''}</td><td><button class="btn btn-ghost btn-sm" onclick="quitarEntidad('${x.codigo}')">Quitar</button></td></tr>`).join('')}</tbody>
+      </table>
+      <div class="formGrid" style="margin-top:12px;">
+        <div class="field"><label>Código nuevo (corto)</label><input type="text" id="ent_cod" maxlength="12" placeholder="Ej. ING"></div>
+        <div class="field"><label>Nombre</label><input type="text" id="ent_nom" placeholder="Ej. ING Direct"></div>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="anadirEntidad()">+ Añadir entidad</button>
+    </div>
+    ` : ''}
 
     ${isAdmin ? `
     <div class="sectionTitle"><h3>Copia de seguridad</h3></div>
