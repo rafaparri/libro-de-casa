@@ -620,7 +620,7 @@ body.sideHidden .sidebar{ display:none; }
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 10:42 · desglose emergente</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 10:54 · desglose con tabla</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
@@ -975,13 +975,34 @@ async function verDesgloseGrupo(g){
   const total = tx.reduce((a,t)=>a+t.importe,0);
   const [y,m] = mk.split('-').map(Number);
   const esc = x=>String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  let cats = [];
+  try{ cats = (await computePresupuestoData(mk)).rows.filter(r=>r.grupo===g && (r.total>0.005 || r.real>0.005)).sort((a,b)=>b.real-a.real); }catch(e){ console.error(e); }
+  const totPrev = cats.reduce((a,r)=>a+r.total,0), totReal = cats.reduce((a,r)=>a+r.real,0);
+  const devCell = (prev,real)=>{
+    const d = real-prev;
+    const pr = prev>0.005 ? Math.round(d/prev*100) : null;
+    const pct = pr===null ? '' : ' ('+(pr>0?'+':'')+pr+'%)';
+    return `<span class="${d>0.005?'neg':'pos'}" style="font-weight:700;">${d>0?'+':''}${fmtMoney(d)}${pct}</span>`;
+  };
+  const tablaCats = cats.length===0 ? '' : `
+    <div style="overflow-x:auto; margin-bottom:14px;">
+    <table style="min-width:0; width:100%;">
+      <thead><tr><th>Concepto</th><th style="text-align:right;">Previsto</th><th style="text-align:right;">Real</th><th style="text-align:right;">Desviación</th></tr></thead>
+      <tbody>
+        ${cats.map(r=>`<tr><td>${esc(r.tipo)}</td><td class="amt">${fmtMoney(r.total)}</td><td class="amt">${fmtMoney(r.real)}</td><td class="amt">${devCell(r.total,r.real)}</td></tr>`).join('')}
+        <tr style="font-weight:800;"><td>TOTAL</td><td class="amt">${fmtMoney(totPrev)}</td><td class="amt">${fmtMoney(totReal)}</td><td class="amt">${devCell(totPrev,totReal)}</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="small" style="margin-bottom:6px;">Desviación = real − previsto. En rojo, te has pasado; en verde, dentro de lo previsto.</div>`;
   openModal(`
     <h3>${esc(g)} — ${MONTH_NAMES[m-1]} ${y}</h3>
-    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+    ${tablaCats}
+    <div style="display:flex; justify-content:space-between; align-items:baseline; margin:10px 0;">
       <span class="small">${tx.length} movimiento${tx.length===1?'':'s'}</span>
       <span style="font-size:20px; font-weight:800;" class="${total<0?'neg':'pos'}">${fmtMoney(total)}</span>
     </div>
-    <div style="max-height:58vh; overflow:auto; border-top:1px solid var(--line);">
+    <div style="max-height:34vh; overflow:auto; border-top:1px solid var(--line);">
       ${tx.length===0 ? '<div class="empty small">Sin movimientos en este grupo este mes.</div>' : tx.map(t=>`
         <div style="display:flex; justify-content:space-between; gap:12px; padding:11px 2px; border-bottom:1px solid var(--line);">
           <div style="min-width:0;">
@@ -996,7 +1017,7 @@ async function verDesgloseGrupo(g){
       <button class="btn btn-primary" onclick="closeModal()">Cerrar</button>
     </div>
   `);
-  document.getElementById('modalInner').style.maxWidth = '760px';
+  document.getElementById('modalInner').style.maxWidth = '820px';
 }
 function verMovimientosGrupo(g){
   MOV_FILTER.text=''; MOV_FILTER.tipo=''; MOV_FILTER.grupo=g; MOV_FILTER.onlyUncat=false; MOV_FILTER.entidad=''; MOV_FILTER.scope='mes';
