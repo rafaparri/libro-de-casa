@@ -627,7 +627,7 @@ body.sideHidden .sidebar{ display:none; }
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 10:57 · tabla de grupos</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 19:28 · avisos al entrar</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
@@ -1290,26 +1290,42 @@ async function submitHogarCode(){
   const msg = document.getElementById('hogarMsg');
   msg.innerHTML='';
   if(!code){ msg.innerHTML = '<div class="authMsg err">Escribe un código de hogar (letras, números, guiones).</div>'; return; }
+  msg.innerHTML = '<div class="authMsg ok">Comprobando el hogar…</div>';
   CURRENT_HOGAR = code;
-  let exists = false;
   try{
-    const doc = await firestoreDb.collection(FIRESTORE_COLLECTION).doc(`h_${code}__users`).get();
-    exists = doc.exists;
+    let exists = false;
+    const lectura = firestoreDb.collection(FIRESTORE_COLLECTION).doc(`h_${code}__users`).get();
+    const espera = new Promise((_,rej)=>setTimeout(()=>rej(new Error('La base de datos no responde (15 s). Comprueba la conexión a internet.')),15000));
+    try{
+      const doc = await Promise.race([lectura, espera]);
+      exists = doc.exists;
+    }catch(e){
+      // Si no se puede LEER no se debe suponer que el hogar no existe (se podría crear encima de uno real)
+      console.error(e);
+      const cod = e && e.code ? ' ('+e.code+')' : '';
+      msg.innerHTML = '<div class="authMsg err">No se ha podido consultar el hogar: '+((e&&e.message)||e)+cod+'</div>';
+      CURRENT_HOGAR = null;
+      return;
+    }
+    msg.innerHTML='';
+    if(exists){
+      const users = await sGet('users', []);
+      STATE.users = users;
+      let remUser = null;
+      try{
+        const rem = (await getRememberedSessions())[code];
+        remUser = rem && users.find(u=>u.username===rem);
+      }catch(e){ console.error(e); }
+      if(remUser){ await enterApp(remUser); return; }
+      document.getElementById('loginHogarLabel').textContent = `Hogar: ${code}`;
+      showAuthCard('loginCard');
+    }else{
+      document.getElementById('setupHogarLabel').textContent = code;
+      showAuthCard('setupCard');
+    }
   }catch(e){
     console.error(e);
-    exists = false;
-  }
-  if(exists){
-    const users = await sGet('users', []);
-    STATE.users = users;
-    const rem = (await getRememberedSessions())[code];
-    const remUser = rem && users.find(u=>u.username===rem);
-    if(remUser){ await enterApp(remUser); return; }
-    document.getElementById('loginHogarLabel').textContent = `Hogar: ${code}`;
-    showAuthCard('loginCard');
-  }else{
-    document.getElementById('setupHogarLabel').textContent = code;
-    showAuthCard('setupCard');
+    msg.innerHTML = '<div class="authMsg err">Error al entrar: '+((e&&e.message)||e)+'</div>';
   }
 }
 function backToHogarScreen(){
