@@ -422,6 +422,9 @@ tr:hover td{ background:var(--paper-alt); }
 .sidebar .field label{ color:var(--side-ink); }
 .userBox{ border-top-color:rgba(255,255,255,.14); }
 .themePick{ margin:0 0 12px; }
+#sidebarHogarSwitchWrap > div{ display:flex; gap:6px; align-items:center; }
+#sidebarHogarSwitchSelect{ width:auto !important; min-width:0; flex:1 1 auto; padding:9px 10px; font-size:13.5px; border-radius:10px; }
+#sidebarHogarSwitchWrap .iconBtn{ flex:none; width:36px; height:36px; }
 .themePick label{ display:block; font-size:10.5px; color:var(--side-ink); opacity:.7; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
 .themeDots{ display:flex; gap:10px; }
 .themeDots button{ width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.35); padding:0; box-shadow:0 2px 6px rgba(0,0,0,.3); }
@@ -438,14 +441,13 @@ tr:hover td{ background:var(--paper-alt); }
 .content{ padding:16px 28px 60px; }
 
 /* tarjetas de cifras del resumen */
-.grid-4 > .card{ position:relative; padding:20px 20px 18px 20px; overflow:hidden; }
-.grid-4 > .card::before{
-  content:"↗"; display:flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:12px;
-  background:var(--sage-pale); color:var(--sage); font-size:19px; font-weight:800; margin-bottom:12px;
+.card:has(> .statNum){ position:relative; padding:20px 20px 18px 20px; }
+.card:has(> .statNum)::before{
+  content:"◆"; display:flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:12px;
+  background:var(--brass-pale); color:var(--brass); font-size:15px; font-weight:800; margin-bottom:12px;
 }
-.grid-4 > .card:nth-child(2)::before{ content:"↘"; background:var(--brick-pale); color:var(--brick); }
-.grid-4 > .card:nth-child(3)::before{ content:"◆"; background:var(--brass-pale); color:var(--brass); font-size:15px; }
-.grid-4 > .card:nth-child(4)::before{ content:"="; background:var(--pine-pale); color:var(--pine); }
+.card:has(> .statNum.pos)::before{ content:"↗"; background:var(--sage-pale); color:var(--sage); font-size:19px; }
+.card:has(> .statNum.neg)::before{ content:"↘"; background:var(--brick-pale); color:var(--brick); font-size:19px; }
 .statNum{ font-size:30px; font-weight:800; letter-spacing:-.02em; margin-top:4px; }
 .statSub{ font-size:12.5px; line-height:1.4; }
 .grid{ gap:18px; }
@@ -470,8 +472,8 @@ body.sideHidden .sidebar{ display:none; }
   .content{ padding:10px 14px calc(96px + env(safe-area-inset-bottom)); }
   .card{ border-radius:18px; padding:16px; }
   .grid-4{ grid-template-columns:1fr 1fr; gap:12px; }
-  .grid-4 > .card{ padding:14px; }
-  .grid-4 > .card::before{ width:32px; height:32px; font-size:16px; margin-bottom:8px; }
+  .card:has(> .statNum){ padding:14px; }
+  .card:has(> .statNum)::before{ width:32px; height:32px; margin-bottom:8px; }
   .statNum{ font-size:21px; }
   .sidebar{ transition:transform .25s ease; width:290px; padding-bottom:30px; overflow-y:auto; z-index:60; position:fixed; height:100%; }
   .sidebarBackdrop.show{ z-index:55; }
@@ -618,7 +620,7 @@ body.sideHidden .sidebar{ display:none; }
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 29-oct 22:30 · diseño tarjetas + 4 estilos</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 10:50 · iconos y colores afinados</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
@@ -717,7 +719,11 @@ const GROUP_COLORS = {
   MARIO:"#3FBF7F", IMPUESTOS:"#E5473D", INGRESO:"#1FAE6E", OTROS:"#8C8FA0", OCIO:"#FF6B47",
   AHORRO:"#2E7DD1", PLAZOS:"#D9679A", "SIN CATEGORIZAR":"#B7BFC2"
 };
-function colorFor(g){ return GROUP_COLORS[g] || "#8C8FA0"; }
+function colorFor(g){
+  if(GROUP_COLORS[g]) return GROUP_COLORS[g];
+  let h=0; const t=String(g||''); for(let i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))>>>0;
+  return CATEGORY_PALETTE[h % CATEGORY_PALETTE.length];
+}
 const CATEGORY_PALETTE = ["#0E8C8C","#2AAEB0","#5B6BC0","#9B5DE5","#F2A93B","#3FBF7F","#E5473D","#FF6B47","#2E7DD1","#D9679A","#8C8FA0","#C9A24B"];
 
 /* =====================================================================
