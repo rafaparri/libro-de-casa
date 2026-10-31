@@ -620,7 +620,7 @@ body.sideHidden .sidebar{ display:none; }
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 10:54 · desglose con tabla</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 10:57 · tabla de grupos</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
@@ -969,6 +969,35 @@ const CHART_INSTANCES = {};
 let PENDING_IMPORT = null; // datos de una importación esperando mapeo manual de columnas
 
 /* Gráficos de reparto por grupo: porcentajes y clic para ir a Movimientos filtrado */
+
+/* Tabla de grupos bajo el gráfico de Informes: % del gasto, previsto, real y desviación (clic = desglose) */
+function tablaGruposInforme(rows, byGroup){
+  const prev = {};
+  rows.forEach(r=>{ if(!isIncomeGroup(r.grupo) && r.grupo!=='AHORRO'){ prev[r.grupo] = (prev[r.grupo]||0) + (Number(r.prevision)||0); } });
+  const grupos = [...new Set([...Object.keys(byGroup), ...Object.keys(prev).filter(g=>prev[g]>0.005)])]
+    .sort((a,b)=>(byGroup[b]||0)-(byGroup[a]||0));
+  if(grupos.length===0) return '';
+  const totalReal = grupos.reduce((a,g)=>a+(byGroup[g]||0),0) || 1;
+  const totalPrev = grupos.reduce((a,g)=>a+(prev[g]||0),0);
+  const dev = (p,r)=>{
+    const d = r-p, pr = p>0.005 ? Math.round(d/p*100) : null;
+    return `<span class="${d>0.005?'neg':'pos'}" style="font-weight:700;">${d>0?'+':''}${fmtMoney(d)}${pr===null?'':' ('+(pr>0?'+':'')+pr+'%)'}</span>`;
+  };
+  const pc = v => (v/totalReal*100).toLocaleString('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+  return `
+    <div style="overflow-x:auto; margin-top:14px;">
+    <table style="min-width:0; width:100%;">
+      <thead><tr><th>Grupo</th><th style="text-align:right;">%</th><th style="text-align:right;">Previsto</th><th style="text-align:right;">Real</th><th style="text-align:right;">Desviación</th></tr></thead>
+      <tbody>
+        ${grupos.map(g=>`<tr style="cursor:pointer;" title="Ver el desglose de ${g.replace(/"/g,'&quot;')}" onclick="verDesgloseGrupo(${JSON.stringify(g).replace(/"/g,'&quot;')})">
+          <td><span class="legendDot" style="background:${colorFor(g)};"></span>${g}</td>
+          <td class="amt">${pc(byGroup[g]||0)}</td><td class="amt">${fmtMoney(prev[g]||0)}</td><td class="amt">${fmtMoney(byGroup[g]||0)}</td><td class="amt">${dev(prev[g]||0, byGroup[g]||0)}</td></tr>`).join('')}
+        <tr style="font-weight:800;"><td>TOTAL</td><td class="amt">100%</td><td class="amt">${fmtMoney(totalPrev)}</td><td class="amt">${fmtMoney(totalReal)}</td><td class="amt">${dev(totalPrev,totalReal)}</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="small" style="margin-top:8px;">Desviación = real − previsto (rojo: te has pasado). Pulsa un grupo para ver su desglose.</div>`;
+}
 async function verDesgloseGrupo(g){
   const mk = STATE.currentMonth;
   const tx = (await loadMonthTx(mk)).filter(t=>!t.voided && t.tipo && groupOf(t.tipo)===g).sort((a,b)=>b.date.localeCompare(a.date));
@@ -1023,7 +1052,8 @@ function verMovimientosGrupo(g){
   MOV_FILTER.text=''; MOV_FILTER.tipo=''; MOV_FILTER.grupo=g; MOV_FILTER.onlyUncat=false; MOV_FILTER.entidad=''; MOV_FILTER.scope='mes';
   go('movimientos');
 }
-function groupPieConfig(byGroup){
+function groupPieConfig(byGroup, opts){
+  opts = opts||{};
   const gl = Object.keys(byGroup).sort((a,b)=>byGroup[b]-byGroup[a]);
   const total = gl.reduce((a,g)=>a+byGroup[g],0) || 1;
   const pct = g => (byGroup[g]/total*100);
@@ -1037,7 +1067,7 @@ function groupPieConfig(byGroup){
       onClick:(e,els)=>{ if(els && els.length) verDesgloseGrupo(gl[els[0].index]); },
       onHover:(e,els)=>setPointer(e, els && els.length>0),
       plugins:{
-        legend:{ position:'right', labels:{boxWidth:12, font:{size:12.5}, padding:10},
+        legend:{ display:!opts.noLegend, position:'right', labels:{boxWidth:12, font:{size:12.5}, padding:10},
           onClick:(e,item)=>verDesgloseGrupo(gl[item.index]),
           onHover:(e)=>setPointer(e,true), onLeave:(e)=>setPointer(e,false) },
         tooltip:{ callbacks:{ label:(c)=>{ const g=gl[c.dataIndex]; return ' '+g+': '+fmtMoney(byGroup[g])+' ('+pctTxt(g)+') — clic para ver los movimientos'; } } }
@@ -3762,7 +3792,8 @@ async function renderReportBody(){
     <div class="two-col" style="margin-top:16px;">
       <div class="card">
         <h3 style="margin-bottom:10px;">Gasto por grupo</h3>
-        <div class="chartBoxSm"><canvas id="repPie"></canvas></div>
+        <div class="chartBox" style="height:320px;"><canvas id="repPie"></canvas></div>
+        ${tablaGruposInforme(rows, byGroup)}
       </div>
       <div class="card" style="padding:0;">
         <table>
@@ -3813,7 +3844,7 @@ async function renderReportBody(){
       scales:{x:{title:{display:true,text:'Día del mes'}}, y:{beginAtZero:true, ticks:{callback:v=>fmtMoney(v)}}}
     }
   });
-  renderChart('repPie', groupPieConfig(byGroup));
+  renderChart('repPie', groupPieConfig(byGroup,{noLegend:true}));
 
 }
 async function exportInformePDF(){
