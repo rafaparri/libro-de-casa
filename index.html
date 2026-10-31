@@ -620,7 +620,7 @@ body.sideHidden .sidebar{ display:none; }
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 11:10 · gráficos con enlace</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 10:42 · desglose emergente</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
@@ -969,6 +969,35 @@ const CHART_INSTANCES = {};
 let PENDING_IMPORT = null; // datos de una importación esperando mapeo manual de columnas
 
 /* Gráficos de reparto por grupo: porcentajes y clic para ir a Movimientos filtrado */
+async function verDesgloseGrupo(g){
+  const mk = STATE.currentMonth;
+  const tx = (await loadMonthTx(mk)).filter(t=>!t.voided && t.tipo && groupOf(t.tipo)===g).sort((a,b)=>b.date.localeCompare(a.date));
+  const total = tx.reduce((a,t)=>a+t.importe,0);
+  const [y,m] = mk.split('-').map(Number);
+  const esc = x=>String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  openModal(`
+    <h3>${esc(g)} — ${MONTH_NAMES[m-1]} ${y}</h3>
+    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+      <span class="small">${tx.length} movimiento${tx.length===1?'':'s'}</span>
+      <span style="font-size:20px; font-weight:800;" class="${total<0?'neg':'pos'}">${fmtMoney(total)}</span>
+    </div>
+    <div style="max-height:58vh; overflow:auto; border-top:1px solid var(--line);">
+      ${tx.length===0 ? '<div class="empty small">Sin movimientos en este grupo este mes.</div>' : tx.map(t=>`
+        <div style="display:flex; justify-content:space-between; gap:12px; padding:11px 2px; border-bottom:1px solid var(--line);">
+          <div style="min-width:0;">
+            <div style="font-weight:600; word-break:break-word;">${esc(t.concepto)}</div>
+            <div class="small">${fmtDate(t.date)} · ${esc(t.tipo)}${t.entidad?' · '+esc(t.entidad):''}</div>
+          </div>
+          <div class="${t.importe<0?'neg':'pos'}" style="font-weight:700; white-space:nowrap;">${fmtMoney(t.importe)}</div>
+        </div>`).join('')}
+    </div>
+    <div class="foot">
+      <button class="btn btn-ghost" onclick="closeModal(); verMovimientosGrupo(${JSON.stringify(g).replace(/"/g,'&quot;')})">Abrir en Movimientos</button>
+      <button class="btn btn-primary" onclick="closeModal()">Cerrar</button>
+    </div>
+  `);
+  document.getElementById('modalInner').style.maxWidth = '760px';
+}
 function verMovimientosGrupo(g){
   MOV_FILTER.text=''; MOV_FILTER.tipo=''; MOV_FILTER.grupo=g; MOV_FILTER.onlyUncat=false; MOV_FILTER.entidad=''; MOV_FILTER.scope='mes';
   go('movimientos');
@@ -984,11 +1013,11 @@ function groupPieConfig(byGroup){
     data:{ labels: gl.map(g=>g+' · '+pctTxt(g)), datasets:[{data:gl.map(g=>byGroup[g]), backgroundColor:gl.map(colorFor), borderColor:cv('--card'), borderWidth:2}] },
     options:{
       responsive:true, maintainAspectRatio:false,
-      onClick:(e,els)=>{ if(els && els.length) verMovimientosGrupo(gl[els[0].index]); },
+      onClick:(e,els)=>{ if(els && els.length) verDesgloseGrupo(gl[els[0].index]); },
       onHover:(e,els)=>setPointer(e, els && els.length>0),
       plugins:{
         legend:{ position:'right', labels:{boxWidth:12, font:{size:12.5}, padding:10},
-          onClick:(e,item)=>verMovimientosGrupo(gl[item.index]),
+          onClick:(e,item)=>verDesgloseGrupo(gl[item.index]),
           onHover:(e)=>setPointer(e,true), onLeave:(e)=>setPointer(e,false) },
         tooltip:{ callbacks:{ label:(c)=>{ const g=gl[c.dataIndex]; return ' '+g+': '+fmtMoney(byGroup[g])+' ('+pctTxt(g)+') — clic para ver los movimientos'; } } }
       }
@@ -5501,6 +5530,7 @@ async function confirmWipeHogar(){
    MODAL helpers
    ===================================================================== */
 function openModal(html){
+  document.getElementById('modalInner').style.maxWidth = '';
   document.getElementById('modalInner').innerHTML = html;
   document.getElementById('modalBg').classList.add('show');
 }
