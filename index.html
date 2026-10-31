@@ -620,7 +620,7 @@ body.sideHidden .sidebar{ display:none; }
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 10:50 · iconos y colores afinados</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 11:10 · gráficos con enlace</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
@@ -967,6 +967,34 @@ let STATE = {
    cuando el <canvas> ya no existe (por navegación rápida entre vistas/meses). */
 const CHART_INSTANCES = {};
 let PENDING_IMPORT = null; // datos de una importación esperando mapeo manual de columnas
+
+/* Gráficos de reparto por grupo: porcentajes y clic para ir a Movimientos filtrado */
+function verMovimientosGrupo(g){
+  MOV_FILTER.text=''; MOV_FILTER.tipo=''; MOV_FILTER.grupo=g; MOV_FILTER.onlyUncat=false; MOV_FILTER.entidad=''; MOV_FILTER.scope='mes';
+  go('movimientos');
+}
+function groupPieConfig(byGroup){
+  const gl = Object.keys(byGroup).sort((a,b)=>byGroup[b]-byGroup[a]);
+  const total = gl.reduce((a,g)=>a+byGroup[g],0) || 1;
+  const pct = g => (byGroup[g]/total*100);
+  const pctTxt = g => pct(g).toLocaleString('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+  const setPointer = (e,on)=>{ const c = e && e.native && e.native.target; if(c) c.style.cursor = on?'pointer':'default'; };
+  return {
+    type:'doughnut',
+    data:{ labels: gl.map(g=>g+' · '+pctTxt(g)), datasets:[{data:gl.map(g=>byGroup[g]), backgroundColor:gl.map(colorFor), borderColor:cv('--card'), borderWidth:2}] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      onClick:(e,els)=>{ if(els && els.length) verMovimientosGrupo(gl[els[0].index]); },
+      onHover:(e,els)=>setPointer(e, els && els.length>0),
+      plugins:{
+        legend:{ position:'right', labels:{boxWidth:12, font:{size:12.5}, padding:10},
+          onClick:(e,item)=>verMovimientosGrupo(gl[item.index]),
+          onHover:(e)=>setPointer(e,true), onLeave:(e)=>setPointer(e,false) },
+        tooltip:{ callbacks:{ label:(c)=>{ const g=gl[c.dataIndex]; return ' '+g+': '+fmtMoney(byGroup[g])+' ('+pctTxt(g)+') — clic para ver los movimientos'; } } }
+      }
+    }
+  };
+}
 function renderChart(canvasId, config){
   applyChartTheme();
   const canvas = document.getElementById(canvasId);
@@ -1703,12 +1731,8 @@ async function renderDashboard(gen){
     const g = groupOf(t.tipo);
     byGroup[g] = (byGroup[g]||0) + Math.abs(t.importe);
   });
-  const groupLabels = Object.keys(byGroup);
-  renderChart('chPie', {
-    type:'doughnut',
-    data:{ labels:groupLabels, datasets:[{data:groupLabels.map(g=>byGroup[g]), backgroundColor:groupLabels.map(colorFor)}] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:10, font:{size:11}}}} }
-  });
+  renderChart('chPie', groupPieConfig(byGroup));
+
 
   // Evolution chart: last 6 months
   const months = [];
@@ -3739,12 +3763,8 @@ async function renderReportBody(){
       scales:{x:{title:{display:true,text:'Día del mes'}}, y:{beginAtZero:true, ticks:{callback:v=>fmtMoney(v)}}}
     }
   });
-  const gl = Object.keys(byGroup);
-  renderChart('repPie', {
-    type:'doughnut',
-    data:{labels:gl, datasets:[{data:gl.map(g=>byGroup[g]), backgroundColor:gl.map(colorFor)}]},
-    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:10,font:{size:11}}}}}
-  });
+  renderChart('repPie', groupPieConfig(byGroup));
+
 }
 async function exportInformePDF(){
   if(!window.jspdf || !window.jspdf.jsPDF){
