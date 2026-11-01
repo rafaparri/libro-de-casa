@@ -639,7 +639,7 @@ body.sideHidden .sidebar{ display:none; }
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 1-nov 08:55 · gráficos a pantalla completa</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 1-nov 09:10 · escala cortada</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
@@ -1118,7 +1118,7 @@ function ampliarGrafico(canvasId){
   applyChartTheme();
   const data = JSON.parse(JSON.stringify(cfg.data));
   const options = Object.assign({}, cfg.options||{}, {responsive:true, maintainAspectRatio:false, onClick:undefined, animation:false});
-  try{ CF_CHART = new Chart(document.getElementById('cfCanvas'), {type:cfg.type, data, options}); }
+  try{ CF_CHART = new Chart(document.getElementById('cfCanvas'), {type:cfg.type, data, options, plugins:(cfg.plugins||[])}); }
   catch(e){ console.error(e); cerrarGraficoCompleto(); }
 }
 function cerrarGraficoCompleto(){
@@ -1126,6 +1126,66 @@ function cerrarGraficoCompleto(){
   if(CF_CHART){ try{ CF_CHART.destroy(); }catch(e){} CF_CHART = null; }
 }
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') cerrarGraficoCompleto(); });
+
+/* Escala "rota" en gráficos de barras: si una categoría es mucho mayor que el resto, su barra se corta
+   (con una marca) y se escribe su valor real encima, para que las demás barras se vean bien. */
+const ESCALA_ROTA_PLUGIN = {
+  id:'escalaRota',
+  afterDatasetsDraw(chart){
+    const o = chart.options.plugins && chart.options.plugins.escalaRota; if(!o || !o.cap) return;
+    const ctx = chart.ctx, ca = chart.chartArea, card = cv('--card');
+    let hay = false;
+    chart.data.datasets.forEach((ds,i)=>{
+      const meta = chart.getDatasetMeta(i); if(meta.hidden || !ds.realValues) return;
+      meta.data.forEach((bar,j)=>{
+        const real = ds.realValues[j]; if(!(real > o.cap)) return;
+        hay = true;
+        const w = bar.width, x = bar.x, top = bar.y;
+        ctx.save();
+        // marca de corte: banda inclinada del color de la tarjeta
+        const by = top + 16;
+        ctx.fillStyle = card;
+        ctx.beginPath(); ctx.moveTo(x-w/2-2, by+7); ctx.lineTo(x+w/2+2, by-3); ctx.lineTo(x+w/2+2, by+3); ctx.lineTo(x-w/2-2, by+13); ctx.closePath(); ctx.fill();
+        // valor real encima
+        ctx.fillStyle = (typeof ds.backgroundColor==='string') ? ds.backgroundColor : cv('--pine');
+        ctx.font = "700 12px 'Plus Jakarta Sans', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        const txt = Math.round(real).toLocaleString('es-ES')+' €';
+        ctx.fillText(txt, Math.min(Math.max(x, ca.left+30), ca.right-30), top-4-(chart.data.datasets.length-1-i)*15);
+        ctx.restore();
+      });
+    });
+    if(hay){
+      ctx.save();
+      // marca de corte en el eje vertical + aviso
+      const y = chart.scales.y.getPixelForValue(o.cap) - 6;
+      ctx.strokeStyle = cv('--ink-soft'); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(ca.left-7, y+3); ctx.lineTo(ca.left+7, y-3); ctx.moveTo(ca.left-7, y+8); ctx.lineTo(ca.left+7, y+2); ctx.stroke();
+      ctx.fillStyle = cv('--ink-soft'); ctx.font = "600 11px 'Plus Jakarta Sans', sans-serif"; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText('Escala cortada · valor real sobre la barra', ca.left+12, ca.top-2);
+      ctx.restore();
+    }
+  }
+};
+function aplicarEscalaRota(config){
+  if(config.type!=='bar' || config._rota) return;
+  const opt = config.options = config.options || {};
+  if(opt.indexAxis==='y' || opt.escalaRota===false) return;
+  const ds = config.data && config.data.datasets; if(!ds || !ds.length) return;
+  const n = (ds[0].data||[]).length; if(n<4) return;
+  const porCat = [];
+  for(let j=0;j<n;j++){ porCat.push(Math.max(...ds.map(d=>Math.abs(Number(d.data[j])||0)))); }
+  const orden = porCat.slice().sort((a,b)=>b-a);
+  if(!(orden[1]>0) || !(orden[0] > orden[1]*1.8)) return;   // no hace falta cortar
+  const cap = orden[1]*1.15;
+  ds.forEach(d=>{ d.realValues = d.data.map(v=>Number(v)||0); d.data = d.data.map(v=>Math.min(Number(v)||0, cap)); });
+  opt.scales = opt.scales || {}; opt.scales.y = Object.assign({}, opt.scales.y||{}, {beginAtZero:true, max:Math.ceil(cap*1.28)});
+  opt.plugins = opt.plugins || {};
+  opt.plugins.escalaRota = {cap};
+  const tt = opt.plugins.tooltip = opt.plugins.tooltip || {};
+  tt.callbacks = Object.assign({}, tt.callbacks||{}, {label:(c)=>{ const d=c.dataset; const v = d.realValues ? d.realValues[c.dataIndex] : c.raw; return ' '+d.label+': '+fmtMoney(v); }});
+  config.plugins = (config.plugins||[]).concat([ESCALA_ROTA_PLUGIN]);
+  config._rota = true;
+}
 function renderChart(canvasId, config){
   applyChartTheme();
   const canvas = document.getElementById(canvasId);
@@ -1135,6 +1195,7 @@ function renderChart(canvasId, config){
     delete CHART_INSTANCES[canvasId];
   }
   try{
+    aplicarEscalaRota(config);
     const chart = new Chart(canvas, config);
     CHART_INSTANCES[canvasId] = chart;
     if(config.type==='bar' || config.type==='line'){
