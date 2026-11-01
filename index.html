@@ -638,8 +638,8 @@ body.sideHidden .sidebar{ display:none; }
           <button class="iconBtn" title="Renombrar este libro" onclick="openRenameCurrentHogar()" style="background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.25); color:#fff; flex:none;">✎</button>
         </div>
       </div>
-      <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 1-nov 09:10 · escala cortada</div>
+      <button class="btn btn-ghost btn-sm btn-block" onclick="actualizarApp()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
+      <div class="small" id="appVersion" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 1-nov 09:27 · aviso de versión nueva</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
@@ -2006,6 +2006,29 @@ function setTheme(t){
   try{ if(STATE.user && STATE.view) go(STATE.view); }catch(e){}
 }
 markTheme(); applyChartTheme();
+
+
+/* Actualización: la app instalada en el iPhone guarda la página en caché; esto detecta versiones nuevas y las carga */
+function actualizarApp(){ location.replace(location.pathname + '?v=' + Date.now()); }
+async function comprobarNuevaVersion(){
+  try{
+    const el = document.getElementById('appVersion'); if(!el) return;
+    const r = await fetch(location.pathname + '?chk=' + Date.now(), {cache:'no-store'});
+    if(!r.ok) return;
+    const t = await r.text();
+    const m = t.match(/id="appVersion"[^>]*>([^<]*)</);
+    if(m && m[1].trim() && m[1].trim() !== el.textContent.trim()){
+      if(document.getElementById('bannerNuevaVersion')) return;
+      const b = document.createElement('div');
+      b.id = 'bannerNuevaVersion';
+      b.style.cssText = 'position:fixed; left:12px; right:12px; top:calc(10px + env(safe-area-inset-top)); z-index:500; background:var(--pine); color:#fff; padding:14px 16px; border-radius:16px; box-shadow:0 8px 28px rgba(0,0,0,.35); display:flex; gap:12px; align-items:center; justify-content:space-between; font-weight:700;';
+      b.innerHTML = '<span>Hay una versión nueva de la app</span><button class="btn btn-sm" style="background:#fff; color:#111;" onclick="actualizarApp()">Actualizar</button>';
+      document.body.appendChild(b);
+    }
+  }catch(e){}
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) comprobarNuevaVersion(); });
+setTimeout(comprobarNuevaVersion, 4000);
 
 let MOV_FILTER = {text:'', tipo:'', grupo:'', onlyUncat:false, entidad:'', scope:'mes', otroMes:'', desde:'', hasta:''};
 let MOV_RENDER_GEN = 0;
