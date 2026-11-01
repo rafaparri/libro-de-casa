@@ -463,6 +463,18 @@ tr:hover td{ background:var(--paper-alt); }
 .hamburgerBtn{ display:inline-flex; background:var(--card); border-radius:12px; color:var(--ink); }
 body.sideHidden .sidebar{ display:none; }
 
+
+/* gráficos ampliables a pantalla completa */
+.chartZoomBtn{ position:absolute; top:4px; right:4px; z-index:3; width:38px; height:38px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--ink-soft); font-size:18px; line-height:1; box-shadow:var(--shadow); display:flex; align-items:center; justify-content:center; }
+.chartZoomBtn:hover{ color:var(--pine); }
+#chartFull{ display:none; position:fixed; inset:0; z-index:400; background:var(--paper); flex-direction:column; padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+#chartFull.show{ display:flex; }
+#chartFull .cfHead{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; }
+#chartFull .cfHead .btn{ white-space:nowrap; flex:none; }
+#chartFull .cfHead h3{ margin:0; font-size:16px; font-weight:800; }
+#chartFull .cfBody{ flex:1; min-height:0; position:relative; margin:0 12px 12px; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:20px; }
+#chartFull .cfHint{ text-align:center; font-size:12px; color:var(--ink-soft); padding:0 0 10px; }
+
 /* barra inferior (solo móvil) */
 .bottomNav{ display:none; }
 .bottomNav button{ background:none; border:none; color:var(--ink-soft); display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11px; font-weight:700; padding:8px 2px; flex:1; border-radius:14px; }
@@ -627,7 +639,7 @@ body.sideHidden .sidebar{ display:none; }
         </div>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="location.reload()" style="margin-bottom:6px;">🔄 Recargar aplicación</button>
-      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 31-oct 19:28 · avisos al entrar</div>
+      <div class="small" style="text-align:center; opacity:.7; margin-bottom:6px;">Versión 1-nov 08:55 · gráficos a pantalla completa</div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="switchHogar()" style="margin-bottom:6px;">🏠 Otro hogar / código nuevo</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="doLogout()" style="margin-bottom:6px;">Cerrar sesión</button>
       <button class="btn btn-ghost btn-sm btn-block" onclick="disconnectDevice()">🔒 Desconectar este dispositivo</button>
@@ -663,6 +675,11 @@ body.sideHidden .sidebar{ display:none; }
 </div>
 
 <!-- ================= MODALES ================= -->
+<div id="chartFull">
+  <div class="cfHead"><h3 id="cfTitle">Gráfico</h3><button class="btn btn-primary btn-sm" onclick="cerrarGraficoCompleto()">✕ Cerrar</button></div>
+  <div class="cfBody"><canvas id="cfCanvas"></canvas></div>
+  <div class="cfHint">Toca un punto o barra para ver su valor. En el móvil, gira el teléfono para verlo más ancho.</div>
+</div>
 <div class="modalBg" id="modalBg">
   <div class="modal" id="modalInner"></div>
 </div>
@@ -1082,6 +1099,33 @@ function groupPieConfig(byGroup, opts){
     }
   };
 }
+
+/* Ampliar gráficos de barras/líneas a pantalla completa */
+const CHART_CONFIGS = {};
+let CF_CHART = null;
+function ampliarGrafico(canvasId){
+  const cfg = CHART_CONFIGS[canvasId]; if(!cfg) return;
+  const src = document.getElementById(canvasId);
+  let titulo = 'Gráfico';
+  if(src){
+    const card = src.closest('.card');
+    const h = (card && card.querySelector('h3')) || (card && card.previousElementSibling && card.previousElementSibling.querySelector && card.previousElementSibling.querySelector('h3'));
+    if(h) titulo = h.textContent.trim();
+  }
+  document.getElementById('cfTitle').textContent = titulo;
+  document.getElementById('chartFull').classList.add('show');
+  if(CF_CHART){ try{ CF_CHART.destroy(); }catch(e){} CF_CHART = null; }
+  applyChartTheme();
+  const data = JSON.parse(JSON.stringify(cfg.data));
+  const options = Object.assign({}, cfg.options||{}, {responsive:true, maintainAspectRatio:false, onClick:undefined, animation:false});
+  try{ CF_CHART = new Chart(document.getElementById('cfCanvas'), {type:cfg.type, data, options}); }
+  catch(e){ console.error(e); cerrarGraficoCompleto(); }
+}
+function cerrarGraficoCompleto(){
+  document.getElementById('chartFull').classList.remove('show');
+  if(CF_CHART){ try{ CF_CHART.destroy(); }catch(e){} CF_CHART = null; }
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') cerrarGraficoCompleto(); });
 function renderChart(canvasId, config){
   applyChartTheme();
   const canvas = document.getElementById(canvasId);
@@ -1093,6 +1137,19 @@ function renderChart(canvasId, config){
   try{
     const chart = new Chart(canvas, config);
     CHART_INSTANCES[canvasId] = chart;
+    if(config.type==='bar' || config.type==='line'){
+      CHART_CONFIGS[canvasId] = config;
+      canvas.style.cursor = 'zoom-in';
+      canvas.title = 'Pulsa para ampliar';
+      canvas.onclick = ()=>ampliarGrafico(canvasId);
+      const box = canvas.parentElement;
+      if(box && !box.querySelector('.chartZoomBtn')){
+        const b = document.createElement('button');
+        b.className = 'chartZoomBtn'; b.type = 'button'; b.title = 'Ampliar a pantalla completa'; b.setAttribute('aria-label','Ampliar gráfico'); b.textContent = '⤢';
+        b.onclick = (ev)=>{ ev.stopPropagation(); ampliarGrafico(canvasId); };
+        box.appendChild(b);
+      }
+    }
     return chart;
   }catch(e){
     console.error('Error creando gráfico', canvasId, e);
